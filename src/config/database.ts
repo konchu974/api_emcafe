@@ -10,7 +10,7 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'emca_bdd',
-  synchronize: false, // En production, utilisez les migrations
+  synchronize: false,
   logging: process.env.NODE_ENV === 'development',
   entities: ['src/entities/**/*.ts'],
   migrations: ['src/migrations/**/*.ts'],
