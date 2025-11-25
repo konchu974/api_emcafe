@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "description": "API E-commerce avec TypeScript, MySQL et TypeORM",
   "main": "dist/server.js",
-  "scripts": {
-  "start": "ts-node src/server.ts",
+"scripts": {
+  "start": "node dist/server.js",
   "dev": "ts-node-dev src/server.ts",
   "build": "tsc"
 }
+
 
 ,
   "dependencies": {
