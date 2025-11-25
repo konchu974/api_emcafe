@@ -4,11 +4,11 @@
   "description": "API E-commerce avec TypeScript, MySQL et TypeORM",
   "main": "dist/server.js",
   "scripts": {
-  "dev": "ts-node src/server.ts",
-  "build": "tsc",
-  "start": "node dist/server.js",
-  "prod": "npm run build && npm start"
+  "start": "ts-node src/server.ts",
+  "dev": "ts-node-dev src/server.ts",
+  "build": "tsc"
 }
+
 ,
   "dependencies": {
     "bcrypt": "^6.0.0",
