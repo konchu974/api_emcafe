@@ -25,7 +25,7 @@ export enum OrderStatus {
 
 @Entity({ name: 'order' })
 export class Order {
-  @PrimaryGeneratedColumn('uuid')
+  @PrimaryGeneratedColumn("uuid")
   id_order!: string;
 
   @ManyToOne(() => UserAccount, (user) => user.orders, { onDelete: 'CASCADE' })
