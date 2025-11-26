@@ -71,4 +71,7 @@ export class Order {
 
   @UpdateDateColumn({ type: 'datetime' })
   updated_at!: Date;
+
+ 
 }
+
