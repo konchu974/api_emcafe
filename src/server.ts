@@ -16,10 +16,11 @@ const PORT = process.env.PORT || 3000;
    !!! MUST be BEFORE express.json() !!!
 ------------------------------------------------------------- */
 app.post(
-  "/api/webhooks/stripe",
+  "/api/payments/stripe",
   express.raw({ type: "application/json" }),
   stripeWebhook
 );
+
 
 /* -------------------------------------------------------------
    2. NORMAL MIDDLEWARES (AFTER webhook)
