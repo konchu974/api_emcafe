@@ -1,64 +1,98 @@
 import { Request, Response } from "express";
-import { paymentService } from "../services/paymentService";
+import * as paymentService from "../services/paymentService";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: "2025-11-17.clover",
 });
 
+// ================= CARD PAYMENT =================
 export const createCardPayment = async (req: Request, res: Response) => {
     try {
-        const {amount} = req.body;
+        const {
+            userId,
+            amount,
+            delivery_address,
+            delivery_city,
+            delivery_postal_code,
+            delivery_country,
+            delivery_phone
+        } = req.body;
 
-        if (!amount) {
-            return res.status(400).json({message: "Missing amount"});
+        if (!userId || !amount) {
+            return res.status(400).json({ message: "Missing userId or amount" });
         }
 
-        const clientSecret = await paymentService.createPaymentIntent(amount);
+        if (!delivery_address || !delivery_city || !delivery_postal_code) {
+            return res.status(400).json({ message: "Missing delivery information" });
+        }
 
-        return res.status(200).json({clientSecret});
+        const clientSecret = await paymentService.createPaymentIntent(req.body);
+
+        return res.status(200).json({ clientSecret });
     } catch (error: any) {
         console.error("Stripe create error:", error.message);
         return res.status(500).json({
-            message:  "Stripe error",
+            message: "Stripe error",
             error: error.message,
         });
     }
 };
 
+// ================= BANK TRANSFER =================
 export const createBankTransfer = async (req: Request, res: Response) => {
     try {
-        const {userId, amount} = req.body;
+        const {
+            userId,
+            amount,
+            delivery_address,
+            delivery_city,
+            delivery_postal_code,
+            delivery_country,
+            delivery_phone
+        } = req.body;
 
         if (!userId || !amount) {
-            return res.status(400).json({message: "Missing parameters"});
+            return res.status(400).json({ message: "Missing parameters" });
         }
 
-        const bankPayment = await paymentService.createBankPayment(userId, amount);
+        if (!delivery_address || !delivery_city || !delivery_postal_code) {
+            return res.status(400).json({ message: "Missing delivery information" });
+        }
+
+        const bankPayment = await paymentService.createBankPayment(
+            userId,
+            amount,
+            delivery_address,
+            delivery_city,
+            delivery_postal_code,
+            delivery_country,
+            delivery_phone
+        );
 
         return res.status(201).json(bankPayment);
-    } catch (error: any){
+    } catch (error: any) {
         console.error("Bank transfer error:", error.message);
         return res.status(500).json({
-            message:  "Bank transfer error",
+            message: "Bank transfer error",
             error: error.message,
         });
     }
 };
 
-
+// ================= CONFIRM PAYMENT (optional) =================
 export const confirmStripePayment = async (req: Request, res: Response) => {
     try {
         const { paymentIntentId } = req.body;
 
         if (!paymentIntentId) {
-            return res.status(400).json({ message: "Missing paymentIntentId"});
+            return res.status(400).json({ message: "Missing paymentIntentId" });
         }
 
         const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
         if (intent.status !== "succeeded") {
-            return res.status(400).json({message: "Payment not completed yet"});
+            return res.status(400).json({ message: "Payment not completed yet" });
         }
 
         return res.status(200).json({

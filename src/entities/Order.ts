@@ -42,4 +42,21 @@ export class Order {
 
   @OneToOne(() => Payment, (payment) => payment.order)
   payment!: Payment;
+
+  // 🌍 DELIVERY FIELDS (missing before!)
+  @Column({ type: "text", nullable: true })
+  delivery_address!: string;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  delivery_city!: string;
+
+  @Column({ type: "varchar", length: 20, nullable: true })
+  delivery_postal_code!: string;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  delivery_country!: string;
+
+  @Column({ type: "varchar", length: 20, nullable: true })
+  delivery_phone!: string;
 }
+
