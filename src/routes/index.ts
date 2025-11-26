@@ -149,8 +149,7 @@ router.post("/payments/card", createCardPayment);
 router.post("/payments/bank-transfer", createBankTransfer);
 router.post("/payments/confirm-stripe", confirmStripePayment);
 
-/* ==================== WEBHOOK ROUTER ==================== */
-router.post("/payments/webhook", express.raw({ type: "application/json" }), stripeWebhook);
+
 
 
 

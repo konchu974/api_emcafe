@@ -13,41 +13,46 @@ export const stripeWebhook = async (req: Request, res: Response) => {
     let event;
 
     try {
+        // req.body MUST BE RAW BUFFER
         event = stripe.webhooks.constructEvent(
-            req.body,
+            req.body,                        // RAW body
             sig,
-            process.env.STRIPE_WEBHOOKS_SECRET as string
+            process.env.STRIPE_WEBHOOK_SECRET! // ⚠️ ensure this matches .env
         );
     } catch (err: any) {
-        console.error("Webhook signature error:", err.message);
+        console.error("❌ Webhook signature error:", err.message);
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
+    console.log("🔔 Stripe webhook received:", event.type);
+
     switch (event.type) {
         case "payment_intent.succeeded": {
-            const intent = event.data.object;
-            console.log("Payment succeeded:", intent.id);
+            const intent = event.data.object as Stripe.PaymentIntent;
+            console.log("✅ Payment succeeded:", intent.id);
 
             const paymentRepo = AppDataSource.getRepository(Payment);
 
             const payment = await paymentRepo.findOne({
-                where: { transaction_id: intent.id},
+                where: { transaction_id: intent.id },
             });
 
-            if (payment){
+            if (payment) {
                 payment.payment_status = "PAID";
                 payment.paid_at = new Date();
                 await paymentRepo.save(payment);
+                console.log("💾 Payment updated in DB");
             }
 
             break;
         }
 
         case "payment_intent.payment_failed": {
-            console.log("Payment failed");
+            console.log("❌ Payment failed");
             break;
         }
     }
 
-    res.json({received: true});
+    // MUST return 200 for Stripe to accept the delivery
+    res.status(200).json({ received: true });
 };
