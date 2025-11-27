@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 3000;
    !!! MUST be BEFORE express.json() !!!
 ------------------------------------------------------------- */
 app.post(
-  "/api/payments/stripe",
+  "/api/webhooks/stripe",
   express.raw({ type: "application/json" }),
   stripeWebhook
 );
