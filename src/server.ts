@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3000;
 ------------------------------------------------------------- */
 app.post(
   "/api/webhooks/stripe",
-  express.raw({ type: "application/json" }),
+  express.raw({ type: "*/*" }),
   stripeWebhook
 );
 
