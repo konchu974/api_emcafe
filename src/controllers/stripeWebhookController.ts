@@ -1,58 +1,58 @@
 import { Request, Response } from "express";
 import Stripe from "stripe";
 import { AppDataSource } from "../config/database";
+import { Order } from "../entities/Order";
 import { Payment } from "../entities/Payment";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-    apiVersion: "2025-11-17.clover",
+  apiVersion: "2025-11-17.clover",
 });
 
 export const stripeWebhook = async (req: Request, res: Response) => {
-    const sig = req.headers["stripe-signature"] as string;
+  const sig = req.headers["stripe-signature"];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-    let event;
+  let event;
 
-    try {
-        // req.body MUST BE RAW BUFFER
-        event = stripe.webhooks.constructEvent(
-            req.body,                        // RAW body
-            sig,
-            process.env.STRIPE_WEBHOOK_SECRET! // ⚠️ ensure this matches .env
-        );
-    } catch (err: any) {
-        console.error("❌ Webhook signature error:", err.message);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
+  try {
+    // IMPORTANT: req.body must be raw buffer, NOT parsed JSON
+    event = stripe.webhooks.constructEvent(
+      req.body,               
+      sig as string,
+      webhookSecret as string
+    );
+  } catch (err: any) {
+    console.error("❌ Webhook signature failed:", err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
 
-    console.log("🔔 Stripe webhook received:", event.type);
+  console.log(`🔔 Webhook received: ${event.type}`);
 
-    switch (event.type) {
-        case "payment_intent.succeeded": {
-            const intent = event.data.object as Stripe.PaymentIntent;
-            console.log("✅ Payment succeeded:", intent.id);
+  if (event.type === "payment_intent.succeeded") {
+    const paymentIntent: any = event.data.object;
 
-            const paymentRepo = AppDataSource.getRepository(Payment);
+const orderId = paymentIntent.metadata?.orderId;
 
-            const payment = await paymentRepo.findOne({
-                where: { transaction_id: intent.id },
-            });
+if (!orderId) {
+  console.log("❌ No orderId in metadata");
+  return res.status(200).send({ received: true });  
+}
 
-            if (payment) {
-                payment.payment_status = "PAID";
-                payment.paid_at = new Date();
-                await paymentRepo.save(payment);
-                console.log("💾 Payment updated in DB");
-            }
 
-            break;
-        }
+    console.log("💳 Payment succeeded for order:", orderId);
 
-        case "payment_intent.payment_failed": {
-            console.log("❌ Payment failed");
-            break;
-        }
-    }
+    const orderRepo = AppDataSource.getRepository(Order);
+    const paymentRepo = AppDataSource.getRepository(Payment);
 
-    // MUST return 200 for Stripe to accept the delivery
-    res.status(200).json({ received: true });
+    await orderRepo.update(orderId, { status: "PAID" });
+
+    await paymentRepo.update(
+      { transaction_id: paymentIntent.id },
+      { payment_status: "PAID" }
+    );
+
+    console.log("✅ Order + Payment updated to PAID");
+  }
+
+  return res.status(200).send({ received: true });
 };
