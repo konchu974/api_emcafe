@@ -13,9 +13,6 @@ import { OrderController } from "../controllers/OrderController";
 import { UpdateOrderStatusDto } from "../dtos/order/UpdateOrderStatusDto";
 import { stripeWebhook } from "../controllers/stripeWebhookController";
 
-
-
-// PAYMENT CONTROLLER — import only ONCE
 import {
   createCardPayment,
   createBankTransfer,
@@ -25,7 +22,6 @@ import { VariantController } from "../controllers/VariantController";
 
 const router = Router();
 
-// Controllers
 const userController = new UserController();
 const productController = new ProductController();
 const orderController = new OrderController();
@@ -47,14 +43,21 @@ router.post(
 
 /* ==================== USER ROUTES ==================== */
 
+// MUST BE FIRST
+router.put(
+  "/users/address",
+  authMiddleware,
+  userController.updateAddress
+);
+
 router.get("/users", authMiddleware, userController.getAll);
 router.get("/users/profile", authMiddleware, userController.getProfile);
 router.get("/users/:id", authMiddleware, userController.getById);
 
+// IMPORTANT: NO VALIDATION MIDDLEWARE HERE
 router.put(
   "/users/:id",
   authMiddleware,
-  validationMiddleware(RegisterDto),
   userController.updateUser
 );
 
@@ -64,6 +67,7 @@ router.delete(
   adminMiddleware,
   userController.delete
 );
+
 
 /* ==================== PRODUCT ROUTES ==================== */
 
@@ -86,7 +90,6 @@ router.get(
 );
 
 router.get("/products/by-intensity", productController.getProductsByIntensity);
-
 router.get("/products/:id", productController.getProductById);
 
 router.post(
@@ -141,7 +144,12 @@ router.patch(
   orderController.updateOrderStatus
 );
 
-router.delete("/orders/:id", authMiddleware, adminMiddleware, orderController.deleteOrder);
+router.delete(
+  "/orders/:id",
+  authMiddleware,
+  adminMiddleware,
+  orderController.deleteOrder
+);
 
 /* ==================== PAYMENT ROUTES ==================== */
 
