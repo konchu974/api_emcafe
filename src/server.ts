@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { AppDataSource } from './config/database';
 import router from './routes';
 import { stripeWebhook } from './controllers/stripeWebhookController';
+import sendcloudRoutes from './routes/sendcloudRoutes';
 
 dotenv.config();
 
@@ -12,25 +13,32 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 /* -------------------------------------------------------------
-   1. STRIPE WEBHOOK (raw body required)
-   !!! MUST be BEFORE express.json() !!!
+   1. CORS CONFIGURATION
+------------------------------------------------------------- */
+app.use(cors({
+  origin: 'http://localhost:4321', // Frontend Astro
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
+
+/* -------------------------------------------------------------
+   2. STRIPE WEBHOOK (AVANT express.json() !)
+   ⚠️ IMPORTANT : Doit être avant express.json()
 ------------------------------------------------------------- */
 app.post(
-  "/api/webhooks/stripe",
-  express.raw({ type: "*/*" }),
+  '/api/webhooks/stripe',
+  express.raw({ type: 'application/json' }),
   stripeWebhook
 );
 
-
 /* -------------------------------------------------------------
-   2. NORMAL MIDDLEWARES (AFTER webhook)
+   3. MIDDLEWARES GÉNÉRAUX
 ------------------------------------------------------------- */
-app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 /* -------------------------------------------------------------
-   3. ROOT ROUTE
+   4. ROOT ROUTE
 ------------------------------------------------------------- */
 app.get('/', (req, res) => {
   res.json({
@@ -42,13 +50,15 @@ app.get('/', (req, res) => {
       users: '/api/users',
       products: '/api/products',
       orders: '/api/orders',
-      payments: '/api/payments'
+      payments: '/api/payments',
+      relay: '/api/relay',
+      sendcloud: '/api/sendcloud'
     }
   });
 });
 
 /* -------------------------------------------------------------
-   4. HEALTH CHECK
+   5. HEALTH CHECK
 ------------------------------------------------------------- */
 app.get('/health', (req, res) => {
   res.json({
@@ -59,12 +69,13 @@ app.get('/health', (req, res) => {
 });
 
 /* -------------------------------------------------------------
-   5. MAIN API ROUTING
+   6. API ROUTES
 ------------------------------------------------------------- */
+app.use('/api/sendcloud', sendcloudRoutes);
 app.use('/api', router);
 
 /* -------------------------------------------------------------
-   6. 404 HANDLER
+   7. 404 HANDLER
 ------------------------------------------------------------- */
 app.use((req, res) => {
   res.status(404).json({
@@ -75,7 +86,7 @@ app.use((req, res) => {
 });
 
 /* -------------------------------------------------------------
-   7. GLOBAL ERROR HANDLER
+   8. GLOBAL ERROR HANDLER
 ------------------------------------------------------------- */
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('❌ Erreur:', err);
@@ -93,7 +104,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 /* -------------------------------------------------------------
-   8. DATABASE + SERVER STARTUP
+   9. DATABASE + SERVER STARTUP
 ------------------------------------------------------------- */
 AppDataSource.initialize()
   .then(() => {
@@ -101,11 +112,11 @@ AppDataSource.initialize()
 
     app.listen(PORT, () => {
       console.log('\n============================================');
-      console.log(`   Serveur démarré sur http://localhost:${PORT}`);
-      console.log(`   Environnement: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`   🚀 Serveur démarré sur http://localhost:${PORT}`);
+      console.log(`   📦 Environnement: ${process.env.NODE_ENV || 'development'}`);
       console.log('============================================\n');
 
-      console.log('Endpoints disponibles:\n');
+      console.log('📍 Endpoints disponibles:\n');
       console.log('Authentification:');
       console.log('   POST   /api/auth/register');
       console.log('   POST   /api/auth/login');
@@ -116,7 +127,13 @@ AppDataSource.initialize()
       console.log('   GET    /api/users/:id');
       console.log('   DELETE /api/users/:id (admin)\n');
 
-      console.log(`Health check: http://localhost:${PORT}/health\n`);
+      console.log('SendCloud:');
+      console.log('   GET    /api/sendcloud/service-points\n');
+
+      console.log('Relay:');
+      console.log('   ...    /api/relay/*\n');
+
+      console.log(`🏥 Health check: http://localhost:${PORT}/health\n`);
     });
   })
   .catch((error) => {

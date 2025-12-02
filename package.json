@@ -22,6 +22,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
@@ -31,10 +32,12 @@
     "express-validator": "^7.3.0",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.15.3",
+    "node-fetch": "^2.7.0",
     "nodemailer": "^7.0.10",
     "reflect-metadata": "^0.2.2",
     "stripe": "^20.0.0",
-    "typeorm": "^0.3.27"
+    "typeorm": "^0.3.27",
+    "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -43,6 +46,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.10.1",
     "@types/nodemailer": "^7.0.3",
+    "@types/xml2js": "^0.4.14",
     "nodemon": "^3.1.11",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
