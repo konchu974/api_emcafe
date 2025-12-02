@@ -10,89 +10,88 @@ export class UserController {
     try {
       const user = await this.userService.register(req.body);
       res.status(201).json(user);
-    } catch (error: any) {
-      res.status(400).json({ message: error.message });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message });
     }
   };
 
-  login = async (req: Request, res: Response): Promise<void> => {
+  login = async (req: Request, res: Response) => {
     try {
       const loginDto: LoginDto = req.body;
 
-      // Validation
       if (!loginDto.email || !loginDto.password) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
-          message: 'Email et mot de passe requis',
+          message: "Email et mot de passe requis",
         });
-        return;
       }
 
       const result = await this.userService.login(loginDto);
-
-      res.status(200).json({
-        success: true,
-        message: 'Connexion réussie',
-        data: result,
-      });
-    } catch (error: any) {
-      console.error('❌ Erreur lors de la connexion:', error);
-      
-      res.status(401).json({
-        success: false,
-        message: error.message || 'Email ou mot de passe incorrect',
-      });
+      res.status(200).json({ success: true, data: result });
+    } catch (err: any) {
+      res.status(401).json({ success: false, message: err.message });
     }
   };
 
-  getAll = async (req: Request, res: Response) => {
+  getAll = async (_: Request, res: Response) => {
     try {
-      const users = await this.userService.findAll();
-      res.json(users);
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
+      res.json(await this.userService.findAll());
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
     }
   };
 
   getById = async (req: Request, res: Response) => {
     try {
-      const user = await this.userService.findById(req.params.id);
-      res.json(user);
-    } catch (error: any) {
-      res.status(404).json({ message: error.message });
+      res.json(await this.userService.findById(req.params.id));
+    } catch (err: any) {
+      res.status(404).json({ message: err.message });
     }
   };
 
   getProfile = async (req: AuthRequest, res: Response) => {
     try {
-      const user = await this.userService.findById(req.user.id);
-      res.json(user);
-    } catch (error: any) {
-      res.status(404).json({ message: error.message });
+      res.json(await this.userService.findById(req.user.id));
+    } catch (err: any) {
+      res.status(404).json({ message: err.message });
     }
   };
 
   updateUser = async (req: Request, res: Response) => {
     try {
       const user = await this.userService.UpdateUser(req.params.id, req.body);
-      res.json({
-        success: true,
-        data: user,
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
+      res.json({ success: true, data: user });
+    } catch (err: any) {
+      res.status(400).json({ success: false, message: err.message });
     }
   };
+
+  /* 🆕 UPDATE ADDRESS */
+updateAddress = async (req: AuthRequest, res: Response) => {
+  try {
+    console.log("📩 Received address update body:", req.body);
+    console.log("👤 User ID from token:", req.user.id);
+
+    const updated = await this.userService.updateAddress(req.user.id, req.body);
+
+    res.json({
+      success: true,
+      message: "Adresse mise à jour",
+      data: updated,
+    });
+  } catch (err: any) {
+    console.error("❌ updateAddress ERROR:", err);
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
 
   delete = async (req: Request, res: Response) => {
     try {
       const result = await this.userService.delete(req.params.id);
       res.json(result);
-    } catch (error: any) {
-      res.status(404).json({ message: error.message });
+    } catch (err: any) {
+      res.status(404).json({ message: err.message });
     }
   };
 }
