@@ -20,4 +20,3 @@ __decorate([
     (0, class_validator_1.IsIn)(['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']),
     __metadata("design:type", String)
 ], UpdateOrderStatusDto.prototype, "status", void 0);
-//# sourceMappingURL=UpdateOrderStatusDto.js.map

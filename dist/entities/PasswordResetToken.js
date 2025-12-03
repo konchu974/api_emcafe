@@ -47,4 +47,3 @@ __decorate([
 exports.PasswordResetToken = PasswordResetToken = __decorate([
     (0, typeorm_1.Entity)('password_reset_token')
 ], PasswordResetToken);
-//# sourceMappingURL=PasswordResetToken.js.map

@@ -41,4 +41,3 @@ __decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], UpdateVariantDto.prototype, "isActive", void 0);
-//# sourceMappingURL=UpdateVariant.js.map

@@ -27,7 +27,7 @@ let Order = class Order {
 };
 exports.Order = Order;
 __decorate([
-    (0, typeorm_1.PrimaryGeneratedColumn)('uuid'),
+    (0, typeorm_1.PrimaryGeneratedColumn)("uuid"),
     __metadata("design:type", String)
 ], Order.prototype, "id_order", void 0);
 __decorate([
@@ -90,4 +90,3 @@ __decorate([
 exports.Order = Order = __decorate([
     (0, typeorm_1.Entity)({ name: 'order' })
 ], Order);
-//# sourceMappingURL=Order.js.map

@@ -37,4 +37,3 @@ __decorate([
     (0, class_transformer_1.Type)(() => OrderItemDto),
     __metadata("design:type", Array)
 ], CreateOrderDto.prototype, "items", void 0);
-//# sourceMappingURL=CreateOrderDto.js.map

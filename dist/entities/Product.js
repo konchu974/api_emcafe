@@ -138,4 +138,3 @@ exports.Product = Product = __decorate([
     (0, typeorm_1.Entity)('product'),
     (0, typeorm_1.Index)(['name', 'category', 'is_active', 'price', 'intensity', 'coffee_type'])
 ], Product);
-//# sourceMappingURL=Product.js.map

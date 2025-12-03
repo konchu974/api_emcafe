@@ -16,9 +16,7 @@ exports.AppDataSource = new typeorm_1.DataSource({
     database: process.env.DB_NAME,
     synchronize: false,
     logging: process.env.NODE_ENV === 'development',
-    // NOTE: utiliser dist/ en production
-    entities: [process.env.NODE_ENV === 'production' ? 'dist/entities/**/*.js' : 'src/entities/**/*.ts'],
-    migrations: [process.env.NODE_ENV === 'production' ? 'dist/migrations/**/*.js' : 'src/migrations/**/*.ts'],
-    subscribers: [],
+    entities: ['dist/entities/**/*.js'],
+    migrations: ['dist/migrations/**/*.js'],
+    subscribers: []
 });
-//# sourceMappingURL=database.js.map

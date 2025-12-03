@@ -19,4 +19,3 @@ const notFoundMiddleware = (req, res, next) => {
     });
 };
 exports.notFoundMiddleware = notFoundMiddleware;
-//# sourceMappingURL=errorMiddleware.js.map

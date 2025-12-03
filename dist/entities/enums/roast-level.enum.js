@@ -8,4 +8,3 @@ var RoastLevel;
     RoastLevel["DARK"] = "DARK";
     RoastLevel["EXTRA_DARK"] = "EXTRA_DARK";
 })(RoastLevel || (exports.RoastLevel = RoastLevel = {}));
-//# sourceMappingURL=roast-level.enum.js.map

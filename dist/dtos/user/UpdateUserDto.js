@@ -74,4 +74,3 @@ __decorate([
     (0, class_validator_1.IsEnum)(UserAccount_1.UserRole),
     __metadata("design:type", String)
 ], UpdateUserDto.prototype, "role", void 0);
-//# sourceMappingURL=UpdateUserDto.js.map

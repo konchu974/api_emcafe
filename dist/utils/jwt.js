@@ -55,4 +55,3 @@ const verifyToken = (token) => {
     }
 };
 exports.verifyToken = verifyToken;
-//# sourceMappingURL=jwt.js.map

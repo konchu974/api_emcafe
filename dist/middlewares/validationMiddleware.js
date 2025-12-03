@@ -19,4 +19,3 @@ const validationMiddleware = (type) => {
     };
 };
 exports.validationMiddleware = validationMiddleware;
-//# sourceMappingURL=validationMiddleware.js.map

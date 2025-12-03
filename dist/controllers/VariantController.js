@@ -186,4 +186,3 @@ class VariantController {
     }
 }
 exports.VariantController = VariantController;
-//# sourceMappingURL=VariantController.js.map

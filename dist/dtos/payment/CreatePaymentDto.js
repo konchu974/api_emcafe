@@ -29,4 +29,3 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], CreatePaymentDto.prototype, "status", void 0);
-//# sourceMappingURL=CreatePaymentDto.js.map

@@ -104,4 +104,3 @@ __decorate([
     (0, class_validator_1.MaxLength)(150),
     __metadata("design:type", String)
 ], UpdateProductDto.prototype, "ingredient", void 0);
-//# sourceMappingURL=UpdateProductDto.js.map

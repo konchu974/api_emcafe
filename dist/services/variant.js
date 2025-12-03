@@ -79,4 +79,3 @@ class VariantService {
     }
 }
 exports.VariantService = VariantService;
-//# sourceMappingURL=variant.js.map

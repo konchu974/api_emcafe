@@ -16,31 +16,42 @@ let Payment = class Payment {
 };
 exports.Payment = Payment;
 __decorate([
-    (0, typeorm_1.PrimaryGeneratedColumn)('uuid'),
+    (0, typeorm_1.PrimaryGeneratedColumn)("uuid"),
     __metadata("design:type", String)
 ], Payment.prototype, "id_payment", void 0);
 __decorate([
-    (0, typeorm_1.CreateDateColumn)(),
-    __metadata("design:type", Date)
-], Payment.prototype, "payment_date", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ type: 'decimal', precision: 15, scale: 2 }),
-    __metadata("design:type", Number)
-], Payment.prototype, "amount", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ length: 50, default: 'PENDING' }),
-    __metadata("design:type", String)
-], Payment.prototype, "status", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ type: 'char', length: 36, unique: true }),
+    (0, typeorm_1.Column)({ type: "char", length: 36 }),
     __metadata("design:type", String)
 ], Payment.prototype, "id_order", void 0);
 __decorate([
-    (0, typeorm_1.OneToOne)(() => Order_1.Order, (order) => order.payment, { onDelete: 'CASCADE' }),
-    (0, typeorm_1.JoinColumn)({ name: 'id_order' }),
+    (0, typeorm_1.OneToOne)(() => Order_1.Order, (order) => order.payment, { onDelete: "CASCADE" }),
+    (0, typeorm_1.JoinColumn)({ name: "id_order" }),
     __metadata("design:type", Order_1.Order)
 ], Payment.prototype, "order", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: "decimal", precision: 10, scale: 2 }),
+    __metadata("design:type", Number)
+], Payment.prototype, "amount", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ length: 50 }),
+    __metadata("design:type", String)
+], Payment.prototype, "payment_method", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ length: 50, default: "PENDING" }),
+    __metadata("design:type", String)
+], Payment.prototype, "payment_status", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: "varchar", length: 255, nullable: true }),
+    __metadata("design:type", String)
+], Payment.prototype, "transaction_id", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: "timestamp", nullable: true }),
+    __metadata("design:type", Date)
+], Payment.prototype, "paid_at", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)(),
+    __metadata("design:type", Date)
+], Payment.prototype, "created_at", void 0);
 exports.Payment = Payment = __decorate([
-    (0, typeorm_1.Entity)('payment')
+    (0, typeorm_1.Entity)("payment")
 ], Payment);
-//# sourceMappingURL=Payment.js.map

@@ -10,76 +10,74 @@ class UserController {
                 const user = await this.userService.register(req.body);
                 res.status(201).json(user);
             }
-            catch (error) {
-                res.status(400).json({ message: error.message });
+            catch (err) {
+                res.status(400).json({ message: err.message });
             }
         };
         this.login = async (req, res) => {
             try {
                 const loginDto = req.body;
-                // Validation
                 if (!loginDto.email || !loginDto.password) {
-                    res.status(400).json({
+                    return res.status(400).json({
                         success: false,
-                        message: 'Email et mot de passe requis',
+                        message: "Email et mot de passe requis",
                     });
-                    return;
                 }
                 const result = await this.userService.login(loginDto);
-                res.status(200).json({
-                    success: true,
-                    message: 'Connexion réussie',
-                    data: result,
-                });
+                res.status(200).json({ success: true, data: result });
             }
-            catch (error) {
-                console.error('❌ Erreur lors de la connexion:', error);
-                res.status(401).json({
-                    success: false,
-                    message: error.message || 'Email ou mot de passe incorrect',
-                });
+            catch (err) {
+                res.status(401).json({ success: false, message: err.message });
             }
         };
-        this.getAll = async (req, res) => {
+        this.getAll = async (_, res) => {
             try {
-                const users = await this.userService.findAll();
-                res.json(users);
+                res.json(await this.userService.findAll());
             }
-            catch (error) {
-                res.status(500).json({ message: error.message });
+            catch (err) {
+                res.status(500).json({ message: err.message });
             }
         };
         this.getById = async (req, res) => {
             try {
-                const user = await this.userService.findById(req.params.id);
-                res.json(user);
+                res.json(await this.userService.findById(req.params.id));
             }
-            catch (error) {
-                res.status(404).json({ message: error.message });
+            catch (err) {
+                res.status(404).json({ message: err.message });
             }
         };
         this.getProfile = async (req, res) => {
             try {
-                const user = await this.userService.findById(req.user.id);
-                res.json(user);
+                res.json(await this.userService.findById(req.user.id));
             }
-            catch (error) {
-                res.status(404).json({ message: error.message });
+            catch (err) {
+                res.status(404).json({ message: err.message });
             }
         };
         this.updateUser = async (req, res) => {
             try {
                 const user = await this.userService.UpdateUser(req.params.id, req.body);
+                res.json({ success: true, data: user });
+            }
+            catch (err) {
+                res.status(400).json({ success: false, message: err.message });
+            }
+        };
+        /* 🆕 UPDATE ADDRESS */
+        this.updateAddress = async (req, res) => {
+            try {
+                console.log("📩 Received address update body:", req.body);
+                console.log("👤 User ID from token:", req.user.id);
+                const updated = await this.userService.updateAddress(req.user.id, req.body);
                 res.json({
                     success: true,
-                    data: user,
+                    message: "Adresse mise à jour",
+                    data: updated,
                 });
             }
-            catch (error) {
-                res.status(400).json({
-                    success: false,
-                    message: error.message,
-                });
+            catch (err) {
+                console.error("❌ updateAddress ERROR:", err);
+                res.status(400).json({ success: false, message: err.message });
             }
         };
         this.delete = async (req, res) => {
@@ -87,11 +85,10 @@ class UserController {
                 const result = await this.userService.delete(req.params.id);
                 res.json(result);
             }
-            catch (error) {
-                res.status(404).json({ message: error.message });
+            catch (err) {
+                res.status(404).json({ message: err.message });
             }
         };
     }
 }
 exports.UserController = UserController;
-//# sourceMappingURL=UserController.js.map

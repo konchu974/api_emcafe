@@ -9,4 +9,3 @@ var CoffeeType;
     CoffeeType["DECAFFEINATED"] = "DECAFFEINATED";
     CoffeeType["ORGANIC"] = "ORGANIC";
 })(CoffeeType || (exports.CoffeeType = CoffeeType = {}));
-//# sourceMappingURL=coffee-type.enum.js.map

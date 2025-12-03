@@ -71,4 +71,3 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "country", void 0);
-//# sourceMappingURL=RegisterDto.js.map

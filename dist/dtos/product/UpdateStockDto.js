@@ -20,4 +20,3 @@ __decorate([
     (0, class_validator_1.Min)(-1000, { message: 'La quantité minimum est -1000' }),
     __metadata("design:type", Number)
 ], UpdateStockDto.prototype, "quantity", void 0);
-//# sourceMappingURL=UpdateStockDto.js.map

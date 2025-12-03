@@ -38,7 +38,7 @@ __decorate([
 ], ProductVariant.prototype, "stock", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'varchar', length: 50, nullable: true, unique: true }),
-    __metadata("design:type", Object)
+    __metadata("design:type", String)
 ], ProductVariant.prototype, "sku", void 0);
 __decorate([
     (0, typeorm_1.Column)({ name: 'is_active', type: 'tinyint', width: 1, default: 1 }),
@@ -63,4 +63,3 @@ __decorate([
 exports.ProductVariant = ProductVariant = __decorate([
     (0, typeorm_1.Entity)('product_variants')
 ], ProductVariant);
-//# sourceMappingURL=ProductVariant.js.map

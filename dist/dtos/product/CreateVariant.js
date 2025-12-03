@@ -42,4 +42,3 @@ __decorate([
     (0, class_validator_1.IsBoolean)(),
     __metadata("design:type", Boolean)
 ], CreateVariantDto.prototype, "isActive", void 0);
-//# sourceMappingURL=CreateVariant.js.map
