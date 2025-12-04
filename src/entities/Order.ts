@@ -30,7 +30,7 @@ export class Order {
 
   @ManyToOne(() => UserAccount, (user) => user.orders, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_user_account' })
-  user!: UserAccount;  // ⚠️ Changé de User
+  user!: UserAccount;
 
   @Column({ type: 'char', length: 36, name: 'id_user_account' })
   id_user_account!: string;
@@ -39,11 +39,11 @@ export class Order {
   total!: number;
 
   @Column({
-     type: 'varchar',
-     length: 50,
-     default: OrderStatus.PENDING  
-   })
-   status!: string;
+    type: 'varchar',
+    length: 50,
+    default: OrderStatus.PENDING
+  })
+  status!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   delivery_address?: string;
@@ -57,21 +57,15 @@ export class Order {
   @Column({ type: 'varchar', length: 20, nullable: true })
   delivery_phone?: string;
 
-  @Column({ type: 'text', nullable: true })
-  notes?: string;
-
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order, { cascade: true })
   orderItems!: OrderItem[];
-  
+
   @OneToOne(() => Payment, (payment) => payment.order, { nullable: true })
-   payment?: Payment;
+  payment?: Payment;
 
   @CreateDateColumn({ type: 'datetime' })
   created_at!: Date;
 
   @UpdateDateColumn({ type: 'datetime' })
   updated_at!: Date;
-
- 
 }
-
