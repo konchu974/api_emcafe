@@ -9,50 +9,57 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 });
 
 export const stripeWebhook = async (req: Request, res: Response) => {
-  const sig = req.headers["stripe-signature"];
+  const signature = req.headers["stripe-signature"];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!signature || !webhookSecret) {
+    return res.status(400).send("Missing webhook signature");
+  }
 
   let event;
 
   try {
-    // IMPORTANT: req.body must be raw buffer, NOT parsed JSON
+    // req.body MUST BE RAW BUFFER
     event = stripe.webhooks.constructEvent(
-      req.body,               
-      sig as string,
-      webhookSecret as string
+      req.body,
+      signature,
+      webhookSecret
     );
   } catch (err: any) {
     console.error("❌ Webhook signature failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  console.log(`🔔 Webhook received: ${event.type}`);
+  console.log("🔔 Stripe Event:", event.type);
 
+  /* -------------------------------------------
+     PAYMENT INTENT SUCCEEDED
+  -------------------------------------------- */
   if (event.type === "payment_intent.succeeded") {
-    const paymentIntent: any = event.data.object;
+    const intent: any = event.data.object;
+    const orderId = intent.metadata?.orderId;
 
-const orderId = paymentIntent.metadata?.orderId;
+    if (!orderId) {
+      console.log("❌ Missing orderId in metadata");
+      return res.json({ received: true });
+    }
 
-if (!orderId) {
-  console.log("❌ No orderId in metadata");
-  return res.status(200).send({ received: true });  
-}
-
-
-    console.log("💳 Payment succeeded for order:", orderId);
+    console.log(`💳 Payment succeeded → order ${orderId}`);
 
     const orderRepo = AppDataSource.getRepository(Order);
     const paymentRepo = AppDataSource.getRepository(Payment);
 
+    // Update order status
     await orderRepo.update(orderId, { status: "PAID" });
 
+    // Update payment status
     await paymentRepo.update(
-      { transaction_id: paymentIntent.id },
+      { transaction_id: intent.id },
       { payment_status: "PAID" }
     );
 
-    console.log("✅ Order + Payment updated to PAID");
+    console.log("✅ Order + Payment marked as PAID");
   }
 
-  return res.status(200).send({ received: true });
+  return res.json({ received: true });
 };

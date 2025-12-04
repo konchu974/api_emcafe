@@ -8,16 +8,15 @@ import { ProductController } from "../controllers/ProductController";
 import { CreateProductDto } from "../dtos/product/CreateProductDto";
 import { UpdateProductDto } from "../dtos/product/UpdateProductDto";
 import { UpdateStockDto } from "../dtos/product/UpdateStockDto";
-import { CreateOrderDto } from "../dtos/order/CreateOrderDto";
 import { OrderController } from "../controllers/OrderController";
 import { UpdateOrderStatusDto } from "../dtos/order/UpdateOrderStatusDto";
-import { stripeWebhook } from "../controllers/stripeWebhookController";
 
 import {
   createCardPayment,
   createBankTransfer,
   confirmStripePayment,
 } from "../controllers/paymentController";
+
 import { VariantController } from "../controllers/VariantController";
 
 const router = Router();
@@ -27,68 +26,21 @@ const productController = new ProductController();
 const orderController = new OrderController();
 const variantController = new VariantController();
 
-/* ==================== AUTH ROUTES ==================== */
+/* ==================== AUTH ==================== */
+router.post("/auth/register", validationMiddleware(RegisterDto), userController.register);
+router.post("/auth/login", validationMiddleware(LoginDto), userController.login);
 
-router.post(
-  "/auth/register",
-  validationMiddleware(RegisterDto),
-  userController.register
-);
-
-router.post(
-  "/auth/login",
-  validationMiddleware(LoginDto),
-  userController.login
-);
-
-/* ==================== USER ROUTES ==================== */
-
-// MUST BE FIRST
-router.put(
-  "/users/address",
-  authMiddleware,
-  userController.updateAddress
-);
-
+/* ==================== USERS ==================== */
+router.put("/users/address", authMiddleware, userController.updateAddress);
 router.get("/users", authMiddleware, userController.getAll);
 router.get("/users/profile", authMiddleware, userController.getProfile);
 router.get("/users/:id", authMiddleware, userController.getById);
+router.put("/users/:id", authMiddleware, userController.updateUser);
+router.delete("/users/:id", authMiddleware, adminMiddleware, userController.delete);
 
-// IMPORTANT: NO VALIDATION MIDDLEWARE HERE
-router.put(
-  "/users/:id",
-  authMiddleware,
-  userController.updateUser
-);
-
-router.delete(
-  "/users/:id",
-  authMiddleware,
-  adminMiddleware,
-  userController.delete
-);
-
-
-/* ==================== PRODUCT ROUTES ==================== */
-
-
-router.get('/products/full', productController.getAllProductsWithVariants); 
-
-router.get('/products/:id/full', productController.getProductWithVariants); 
-
+/* ==================== PRODUCTS ==================== */
 router.get("/products", productController.getAllProducts);
 router.get("/products/featured", productController.getFeaturedProducts);
-
-router.get('/size/:size', productController.getProductsBySize);
-
-
-router.get(
-  "/products/low-stock",
-  authMiddleware,
-  adminMiddleware,
-  productController.getLowStockProducts
-);
-
 router.get("/products/by-intensity", productController.getProductsByIntensity);
 router.get("/products/:id", productController.getProductById);
 
@@ -108,12 +60,7 @@ router.put(
   productController.updateProduct
 );
 
-router.delete(
-  "/products/:id",
-  authMiddleware,
-  adminMiddleware,
-  productController.deleteProduct
-);
+router.delete("/products/:id", authMiddleware, adminMiddleware, productController.deleteProduct);
 
 router.patch(
   "/products/:id/stock",
@@ -123,12 +70,11 @@ router.patch(
   productController.updateStock
 );
 
-/* ==================== ORDER ROUTES ==================== */
-
+/* ==================== ORDERS ==================== */
 router.post(
   "/orders",
   authMiddleware,
-  validationMiddleware(CreateOrderDto),
+  validationMiddleware(UpdateOrderStatusDto),
   orderController.createOrder
 );
 
@@ -144,32 +90,19 @@ router.patch(
   orderController.updateOrderStatus
 );
 
-router.delete(
-  "/orders/:id",
-  authMiddleware,
-  adminMiddleware,
-  orderController.deleteOrder
-);
+router.delete("/orders/:id", authMiddleware, adminMiddleware, orderController.deleteOrder);
 
-/* ==================== PAYMENT ROUTES ==================== */
-
+/* ==================== PAYMENTS ==================== */
 router.post("/payments/card", createCardPayment);
 router.post("/payments/bank-transfer", createBankTransfer);
 router.post("/payments/confirm-stripe", confirmStripePayment);
 
-
-
-
-
-/* ==================== EXPORT ROUTER ==================== */
-// Routes publiques
-router.get('/products/:productId/variants', variantController.getVariantsByProduct);
-router.get('/variants/:id', variantController.getVariantById);
-
-// Routes protégées (admin uniquement)
-router.post('/variants', authMiddleware, variantController.createVariant);
-router.patch('/variants/:id', authMiddleware, variantController.updateVariant);
-router.delete('/variants/:id', authMiddleware, variantController.deleteVariant);
-router.patch('/variants/:id/stock', authMiddleware, variantController.updateStock);
+/* ==================== VARIANTS ==================== */
+router.get("/products/:productId/variants", variantController.getVariantsByProduct);
+router.get("/variants/:id", variantController.getVariantById);
+router.post("/variants", authMiddleware, variantController.createVariant);
+router.patch("/variants/:id", authMiddleware, variantController.updateVariant);
+router.delete("/variants/:id", authMiddleware, variantController.deleteVariant);
+router.patch("/variants/:id/stock", authMiddleware, variantController.updateStock);
 
 export default router;
