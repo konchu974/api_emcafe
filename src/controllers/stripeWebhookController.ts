@@ -1,8 +1,10 @@
+// src/controllers/stripeWebhookController.ts
 import { Request, Response } from "express";
 import Stripe from "stripe";
 import { AppDataSource } from "../config/database";
 import { Order } from "../entities/Order";
 import { Payment } from "../entities/Payment";
+import { sendOrderEmails } from "../services/emailService";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-11-17.clover",
@@ -12,11 +14,11 @@ export const stripeWebhook = async (req: Request, res: Response) => {
   const sig = req.headers["stripe-signature"];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  let event;
+  let event: Stripe.Event;
 
   try {
     event = stripe.webhooks.constructEvent(
-      req.body,
+      req.body, // raw body (configured in server.ts)
       sig as string,
       webhookSecret as string
     );
@@ -27,38 +29,51 @@ export const stripeWebhook = async (req: Request, res: Response) => {
 
   console.log(`🔔 Stripe Event: ${event.type}`);
 
+  const orderRepo = AppDataSource.getRepository(Order);
+  const paymentRepo = AppDataSource.getRepository(Payment);
+
   if (event.type === "payment_intent.succeeded") {
-    const paymentIntent: any = event.data.object;
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+    const orderId = (paymentIntent.metadata as any)?.orderId;
 
-    // ⚠ CLOVER: metadata will ALWAYS be empty
-    const transactionId = paymentIntent.id;
-
-    console.log("🔎 Looking for payment with tx:", transactionId);
-
-    const paymentRepo = AppDataSource.getRepository(Payment);
-    const orderRepo = AppDataSource.getRepository(Order);
-
-    // Find payment using transaction_id
-    const payment = await paymentRepo.findOne({
-      where: { transaction_id: transactionId },
-    });
-
-    if (!payment) {
-      console.log("❌ No payment found for tx", transactionId);
+    if (!orderId) {
+      console.log("❌ Missing orderId in metadata");
       return res.status(200).send({ received: true });
     }
 
-    // Update status
-    await paymentRepo.update(payment.id_payment, {
-      payment_status: "PAID",
+    console.log("💳 Payment succeeded for order:", orderId);
+
+    // Update DB
+    await orderRepo.update(orderId, { status: "PAID" });
+
+    await paymentRepo.update(
+      { transaction_id: paymentIntent.id },
+      { payment_status: "PAID" }
+    );
+
+    // Fetch order with user to get email
+    const order = await orderRepo.findOne({
+      where: { id_order: orderId },
+      relations: ["user"],
     });
 
-    await orderRepo.update(payment.id_order, {
-      status: "PAID",
-    });
+    const customerEmail = order?.user?.email ?? undefined;
+    const amount = (paymentIntent.amount_received ?? paymentIntent.amount) / 100;
 
-    console.log("✅ Order + Payment marked PAID !");
+    // Send emails (customer + admin)
+    sendOrderEmails({
+      customerEmail,
+      orderId,
+      amount,
+      paymentMethod: "CARTE BANCAIRE",
+    }).catch((err) =>
+      console.error("❌ Email error (webhook card):", err.message)
+    );
+
+    console.log("✅ Order + Payment updated to PAID");
   }
+
+  // You could handle other event types here if needed
 
   return res.status(200).send({ received: true });
 };

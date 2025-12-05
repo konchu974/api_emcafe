@@ -68,4 +68,8 @@ export class Order {
 
   @UpdateDateColumn({ type: 'datetime' })
   updated_at!: Date;
+
+  @Column({ type: "varchar", length: 150, nullable: true })
+email: string;
+
 }

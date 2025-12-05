@@ -1,6 +1,8 @@
+// src/controllers/paymentController.ts
 import { Request, Response } from "express";
 import * as paymentService from "../services/paymentService";
 import Stripe from "stripe";
+import { sendOrderEmails } from "../services/emailService";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-11-17.clover",
@@ -17,6 +19,7 @@ export const createCardPayment = async (req: Request, res: Response) => {
       delivery_postal_code,
       delivery_country,
       delivery_phone,
+      email,
     } = req.body;
 
     if (!userId || !amount) {
@@ -29,11 +32,14 @@ export const createCardPayment = async (req: Request, res: Response) => {
         .json({ message: "Missing delivery information" });
     }
 
-    // ⬅ NOW RETURNS clientSecret + orderId
+    // returns clientSecret + orderId
     const { clientSecret, orderId } =
       await paymentService.createPaymentIntent(req.body);
 
-    return res.status(200).json({ clientSecret, orderId });
+    // we do NOT send email here yet (only once Stripe confirms via webhook)
+    // but we can store email in metadata later if needed
+
+    return res.status(200).json({ clientSecret, orderId, email });
   } catch (error: any) {
     console.error("Stripe create error:", error.message);
     return res.status(500).json({
@@ -54,6 +60,7 @@ export const createBankTransfer = async (req: Request, res: Response) => {
       delivery_postal_code,
       delivery_country,
       delivery_phone,
+      email,
     } = req.body;
 
     if (!userId || !amount) {
@@ -75,6 +82,14 @@ export const createBankTransfer = async (req: Request, res: Response) => {
       delivery_country,
       delivery_phone
     );
+
+    // Send emails (customer + admin) – fire & forget (no impact if it fails)
+    sendOrderEmails({
+      customerEmail: email,
+      orderId: bankPayment.orderId,
+      amount,
+      paymentMethod: "VIREMENT BANCAIRE",
+    }).catch((err) => console.error("❌ Email error (bank):", err.message));
 
     return res.status(201).json(bankPayment);
   } catch (error: any) {
@@ -110,6 +125,6 @@ export const confirmStripePayment = async (req: Request, res: Response) => {
     return res.status(500).json({
       message: "Stripe confirm error",
       error: error.message,
-    });
-  }
+    });
+  }
 };
