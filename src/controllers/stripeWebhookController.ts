@@ -9,57 +9,56 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 });
 
 export const stripeWebhook = async (req: Request, res: Response) => {
-  const signature = req.headers["stripe-signature"];
+  const sig = req.headers["stripe-signature"];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  if (!signature || !webhookSecret) {
-    return res.status(400).send("Missing webhook signature");
-  }
 
   let event;
 
   try {
-    // req.body MUST BE RAW BUFFER
     event = stripe.webhooks.constructEvent(
       req.body,
-      signature,
-      webhookSecret
+      sig as string,
+      webhookSecret as string
     );
   } catch (err: any) {
     console.error("❌ Webhook signature failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  console.log("🔔 Stripe Event:", event.type);
+  console.log(`🔔 Stripe Event: ${event.type}`);
 
-  /* -------------------------------------------
-     PAYMENT INTENT SUCCEEDED
-  -------------------------------------------- */
   if (event.type === "payment_intent.succeeded") {
-    const intent: any = event.data.object;
-    const orderId = intent.metadata?.orderId;
+    const paymentIntent: any = event.data.object;
 
-    if (!orderId) {
-      console.log("❌ Missing orderId in metadata");
-      return res.json({ received: true });
+    // ⚠ CLOVER: metadata will ALWAYS be empty
+    const transactionId = paymentIntent.id;
+
+    console.log("🔎 Looking for payment with tx:", transactionId);
+
+    const paymentRepo = AppDataSource.getRepository(Payment);
+    const orderRepo = AppDataSource.getRepository(Order);
+
+    // Find payment using transaction_id
+    const payment = await paymentRepo.findOne({
+      where: { transaction_id: transactionId },
+    });
+
+    if (!payment) {
+      console.log("❌ No payment found for tx", transactionId);
+      return res.status(200).send({ received: true });
     }
 
-    console.log(`💳 Payment succeeded → order ${orderId}`);
+    // Update status
+    await paymentRepo.update(payment.id_payment, {
+      payment_status: "PAID",
+    });
 
-    const orderRepo = AppDataSource.getRepository(Order);
-    const paymentRepo = AppDataSource.getRepository(Payment);
+    await orderRepo.update(payment.id_order, {
+      status: "PAID",
+    });
 
-    // Update order status
-    await orderRepo.update(orderId, { status: "PAID" });
-
-    // Update payment status
-    await paymentRepo.update(
-      { transaction_id: intent.id },
-      { payment_status: "PAID" }
-    );
-
-    console.log("✅ Order + Payment marked as PAID");
+    console.log("✅ Order + Payment marked PAID !");
   }
 
-  return res.json({ received: true });
+  return res.status(200).send({ received: true });
 };
