@@ -8,26 +8,25 @@ const {
   SMTP_PASS,
   EMAIL_FROM,
   ADMIN_NOTIFICATION_EMAIL,
-  SMTP_SECURE: SMTP_SECURE_RAW,
 } = process.env;
-
-// Convert secure flag
-const SMTP_SECURE = SMTP_SECURE_RAW === "false" ? false : true;
 
 if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
   console.warn("⚠ SMTP environment variables missing — emails will fail.");
 }
 
+/**
+ * Transporter for cPanel SMTP using port 26 (NON-SSL)
+ */
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
-  port: Number(SMTP_PORT),
-  secure: SMTP_SECURE, // SSL/TLS for port 465
+  port: Number(SMTP_PORT),   // should be 26
+  secure: false,             // ❗ MUST be false on port 26
   auth: {
     user: SMTP_USER,
     pass: SMTP_PASS,
   },
   tls: {
-    rejectUnauthorized: false, // cPanel servers often use custom certs
+    rejectUnauthorized: false, // allow cPanel certs
   },
 });
 
@@ -107,17 +106,15 @@ export async function sendAdminNewOrderEmail(params: OrderEmailParams) {
 }
 
 // -----------------------------
-// Send Both Emails
+// Send Both
 // -----------------------------
 export async function sendOrderEmails(params: OrderEmailParams) {
   await Promise.all([
     sendCustomerOrderEmail(params).catch((err) =>
       console.error("❌ Erreur email client:", err.message)
     ),
-
     sendAdminNewOrderEmail(params).catch((err) =>
       console.error("❌ Erreur email admin:", err.message)
     ),
   ]);
 }
-
