@@ -1,3 +1,4 @@
+// src/services/paymentService.ts
 import Stripe from "stripe";
 import { AppDataSource } from "../config/database";
 import { Order } from "../entities/Order";
@@ -8,14 +9,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-11-17.clover",
 });
 
-/**
- * CARD PAYMENT
- * Creates:
- *  - Order
- *  - Stripe PaymentIntent
- *  - Payment row
- * Returns clientSecret + orderId
- */
+
 export async function createPaymentIntent(data: any) {
   const {
     userId,
@@ -43,17 +37,22 @@ export async function createPaymentIntent(data: any) {
   } as DeepPartial<Order>);
   await orderRepo.save(order);
 
-  // 2. Create Stripe PaymentIntent
+  // 2. Create Stripe PaymentIntent — FIXED VERSION
   const intent = await stripe.paymentIntents.create({
     amount: Math.round(amount * 100),
     currency: "eur",
-    payment_method_types: ["card"],
+
+    //  REQUIRED for Clover: keeps metadata alive
+    automatic_payment_methods: {
+      enabled: true,
+    },
+
     metadata: {
-      orderId: order.id_order.toString(),
+      orderId: order.id_order,
     },
   });
 
-  // 3. Create payment record
+  // 3. Create payment row
   const payment = paymentRepo.create({
     id_order: order.id_order,
     amount,
@@ -63,7 +62,6 @@ export async function createPaymentIntent(data: any) {
   } as DeepPartial<Payment>);
   await paymentRepo.save(payment);
 
-  // ⬅ IMPORTANT: now we return both clientSecret and orderId
   return {
     clientSecret: intent.client_secret,
     orderId: order.id_order,
@@ -71,11 +69,7 @@ export async function createPaymentIntent(data: any) {
 }
 
 /**
- * BANK TRANSFER
- * Creates:
- *  - Order
- *  - Payment row (BANK_TRANSFER)
- * Returns message + orderId + paymentId
+ * BANK TRANSFER (unchanged)
  */
 export async function createBankPayment(
   userId: string,
@@ -89,7 +83,6 @@ export async function createBankPayment(
   const orderRepo = AppDataSource.getRepository(Order);
   const paymentRepo = AppDataSource.getRepository(Payment);
 
-  // Create order (pending)
   const order = orderRepo.create({
     id_user_account: userId,
     status: "PENDING",
@@ -102,7 +95,6 @@ export async function createBankPayment(
   } as DeepPartial<Order>);
   await orderRepo.save(order);
 
-  // Create payment record
   const payment = paymentRepo.create({
     id_order: order.id_order,
     amount,
@@ -115,5 +107,5 @@ export async function createBankPayment(
     message: "Bank transfer created",
     orderId: order.id_order,
     paymentId: payment.id_payment,
-  };
+  };
 }
