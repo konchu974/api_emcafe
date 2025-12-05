@@ -11,16 +11,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 // ================= CARD PAYMENT =================
 export const createCardPayment = async (req: Request, res: Response) => {
   try {
-    const {
-      userId,
-      amount,
-      delivery_address,
-      delivery_city,
-      delivery_postal_code,
-      delivery_country,
-      delivery_phone,
-      email,
-    } = req.body;
+    const { userId, amount, delivery_address, delivery_city, delivery_postal_code } =
+      req.body;
 
     if (!userId || !amount) {
       return res.status(400).json({ message: "Missing userId or amount" });
@@ -32,14 +24,11 @@ export const createCardPayment = async (req: Request, res: Response) => {
         .json({ message: "Missing delivery information" });
     }
 
-    // returns clientSecret + orderId
+    // Create order + paymentIntent
     const { clientSecret, orderId } =
       await paymentService.createPaymentIntent(req.body);
 
-    // we do NOT send email here yet (only once Stripe confirms via webhook)
-    // but we can store email in metadata later if needed
-
-    return res.status(200).json({ clientSecret, orderId, email });
+    return res.status(200).json({ clientSecret, orderId });
   } catch (error: any) {
     console.error("Stripe create error:", error.message);
     return res.status(500).json({
@@ -80,10 +69,11 @@ export const createBankTransfer = async (req: Request, res: Response) => {
       delivery_city,
       delivery_postal_code,
       delivery_country,
-      delivery_phone
+      delivery_phone,
+      email
     );
 
-    // Send emails (customer + admin) – fire & forget (no impact if it fails)
+    // Send email immediately
     sendOrderEmails({
       customerEmail: email,
       orderId: bankPayment.orderId,
@@ -101,7 +91,7 @@ export const createBankTransfer = async (req: Request, res: Response) => {
   }
 };
 
-// ================= CONFIRM PAYMENT (optional) =================
+// ================= CONFIRM PAYMENT =================
 export const confirmStripePayment = async (req: Request, res: Response) => {
   try {
     const { paymentIntentId } = req.body;

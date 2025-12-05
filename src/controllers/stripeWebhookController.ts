@@ -18,7 +18,7 @@ export const stripeWebhook = async (req: Request, res: Response) => {
 
   try {
     event = stripe.webhooks.constructEvent(
-      req.body, // raw body (configured in server.ts)
+      req.body,
       sig as string,
       webhookSecret as string
     );
@@ -34,7 +34,7 @@ export const stripeWebhook = async (req: Request, res: Response) => {
 
   if (event.type === "payment_intent.succeeded") {
     const paymentIntent = event.data.object as Stripe.PaymentIntent;
-    const orderId = (paymentIntent.metadata as any)?.orderId;
+    const orderId = paymentIntent.metadata?.orderId;
 
     if (!orderId) {
       console.log("❌ Missing orderId in metadata");
@@ -51,16 +51,16 @@ export const stripeWebhook = async (req: Request, res: Response) => {
       { payment_status: "PAID" }
     );
 
-    // Fetch order with user to get email
+    // Fetch order (email stored here)
     const order = await orderRepo.findOne({
       where: { id_order: orderId },
-      relations: ["user"],
     });
 
-    const customerEmail = order?.user?.email ?? undefined;
-    const amount = (paymentIntent.amount_received ?? paymentIntent.amount) / 100;
+    const customerEmail = order?.email ?? null;
+    const amount =
+      (paymentIntent.amount_received ?? paymentIntent.amount) / 100;
 
-    // Send emails (customer + admin)
+    // Send both emails
     sendOrderEmails({
       customerEmail,
       orderId,
@@ -72,8 +72,6 @@ export const stripeWebhook = async (req: Request, res: Response) => {
 
     console.log("✅ Order + Payment updated to PAID");
   }
-
-  // You could handle other event types here if needed
 
   return res.status(200).send({ received: true });
 };

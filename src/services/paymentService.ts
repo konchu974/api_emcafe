@@ -9,7 +9,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-11-17.clover",
 });
 
-
+/**
+ * CARD PAYMENT
+ */
 export async function createPaymentIntent(data: any) {
   const {
     userId,
@@ -19,12 +21,13 @@ export async function createPaymentIntent(data: any) {
     delivery_postal_code,
     delivery_country,
     delivery_phone,
+    email,
   } = data;
 
   const orderRepo = AppDataSource.getRepository(Order);
   const paymentRepo = AppDataSource.getRepository(Payment);
 
-  // 1. Create order in DB
+  // 1. Create order
   const order = orderRepo.create({
     id_user_account: userId,
     status: "PENDING",
@@ -34,25 +37,25 @@ export async function createPaymentIntent(data: any) {
     delivery_postal_code,
     delivery_country,
     delivery_phone,
+    email: email, // ✅ FIXED
   } as DeepPartial<Order>);
   await orderRepo.save(order);
 
-  // 2. Create Stripe PaymentIntent — FIXED VERSION
+  // 2. PaymentIntent (Clover-compatible)
   const intent = await stripe.paymentIntents.create({
     amount: Math.round(amount * 100),
     currency: "eur",
 
-    //  REQUIRED for Clover: keeps metadata alive
     automatic_payment_methods: {
       enabled: true,
     },
 
     metadata: {
-      orderId: order.id_order,
+      orderId: order.id_order, // must remain string
     },
   });
 
-  // 3. Create payment row
+  // 3. Payment row
   const payment = paymentRepo.create({
     id_order: order.id_order,
     amount,
@@ -69,7 +72,7 @@ export async function createPaymentIntent(data: any) {
 }
 
 /**
- * BANK TRANSFER (unchanged)
+ * BANK TRANSFER
  */
 export async function createBankPayment(
   userId: string,
@@ -78,7 +81,8 @@ export async function createBankPayment(
   delivery_city: string,
   delivery_postal_code: string,
   delivery_country: string,
-  delivery_phone: string
+  delivery_phone: string,
+  email?: string
 ) {
   const orderRepo = AppDataSource.getRepository(Order);
   const paymentRepo = AppDataSource.getRepository(Payment);
@@ -92,6 +96,7 @@ export async function createBankPayment(
     delivery_postal_code,
     delivery_country,
     delivery_phone,
+    email: email ?? null, 
   } as DeepPartial<Order>);
   await orderRepo.save(order);
 

@@ -6,21 +6,28 @@ const {
   SMTP_PORT,
   SMTP_USER,
   SMTP_PASS,
-  SMTP_SECURE,
   EMAIL_FROM,
   ADMIN_NOTIFICATION_EMAIL,
+  SMTP_SECURE: SMTP_SECURE_RAW,
 } = process.env;
+
+// Convert secure flag
+const SMTP_SECURE = SMTP_SECURE_RAW === "false" ? false : true;
+
+if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS) {
+  console.warn("⚠ SMTP environment variables missing — emails will fail.");
+}
 
 const transporter = nodemailer.createTransport({
   host: SMTP_HOST,
   port: Number(SMTP_PORT),
-  secure: SMTP_SECURE !== "false", // SSL enabled
+  secure: SMTP_SECURE, // SSL/TLS for port 465
   auth: {
     user: SMTP_USER,
     pass: SMTP_PASS,
   },
   tls: {
-    rejectUnauthorized: false, // required on cPanel hosting
+    rejectUnauthorized: false, // cPanel servers often use custom certs
   },
 });
 
@@ -31,45 +38,65 @@ type OrderEmailParams = {
   paymentMethod: "CARTE BANCAIRE" | "VIREMENT BANCAIRE";
 };
 
+// -----------------------------
+// Customer Email HTML
+// -----------------------------
 function customerHtml({ orderId, amount, paymentMethod }: OrderEmailParams) {
   return `
-  <div style="font-family:Arial">
-    <h2>Merci pour votre commande EMCAFFÉ ☕</h2>
-    <p>Nous confirmons votre paiement.</p>
-    <p><strong>Commande :</strong> ${orderId}</p>
+  <div style="font-family:Arial, sans-serif; line-height:1.6; color:#333;">
+    <h2 style="color:#5C3F32;">Merci pour votre commande EMCAFFÉ ☕</h2>
+    <p>Votre commande a bien été enregistrée.</p>
+    <p><strong>Numéro de commande :</strong> ${orderId}</p>
     <p><strong>Montant :</strong> ${amount.toFixed(2)} €</p>
-    <p><strong>Paiement :</strong> ${paymentMethod}</p>
-    <p>Nous vous notifierons dès que la commande sera expédiée.</p>
+    <p><strong>Moyen de paiement :</strong> ${paymentMethod}</p>
+
+    <p style="margin-top:16px;">
+      Nous vous tiendrons informé dès que votre commande sera expédiée.
+    </p>
+
+    <p>À très bientôt,<br/>L'équipe EMCAFFÉ</p>
   </div>`;
 }
 
+// -----------------------------
+// Admin Email HTML
+// -----------------------------
 function adminHtml({ orderId, amount, paymentMethod }: OrderEmailParams) {
   return `
-  <div style="font-family:Arial">
-    <h2>NOUVELLE COMMANDE EMCAFFÉ</h2>
-    <p>Commande payée.</p>
-    <p><strong>ID :</strong> ${orderId}</p>
+  <div style="font-family:Arial, sans-serif; line-height:1.6; color:#333;">
+    <h2>Nouvelle commande EMCAFFÉ</h2>
+    <p>Une commande vient d'être validée.</p>
+    <p><strong>Numéro de commande :</strong> ${orderId}</p>
     <p><strong>Montant :</strong> ${amount.toFixed(2)} €</p>
     <p><strong>Paiement :</strong> ${paymentMethod}</p>
   </div>`;
 }
 
+// -----------------------------
+// Send Customer Email
+// -----------------------------
 export async function sendCustomerOrderEmail(params: OrderEmailParams) {
   if (!params.customerEmail) {
-    console.warn("⚠ Aucun email client, skip.");
+    console.warn("⚠ Aucun email client fourni — email non envoyé.");
     return;
   }
 
   await transporter.sendMail({
     from: EMAIL_FROM || SMTP_USER,
     to: params.customerEmail,
-    subject: `Confirmation commande EMCAFFÉ (${params.orderId})`,
+    subject: `Confirmation de votre commande EMCAFFÉ (${params.orderId})`,
     html: customerHtml(params),
   });
 }
 
+// -----------------------------
+// Send Admin Email
+// -----------------------------
 export async function sendAdminNewOrderEmail(params: OrderEmailParams) {
-  if (!ADMIN_NOTIFICATION_EMAIL) return;
+  if (!ADMIN_NOTIFICATION_EMAIL) {
+    console.warn("⚠ ADMIN_NOTIFICATION_EMAIL manquant — email admin non envoyé.");
+    return;
+  }
 
   await transporter.sendMail({
     from: EMAIL_FROM || SMTP_USER,
@@ -79,9 +106,18 @@ export async function sendAdminNewOrderEmail(params: OrderEmailParams) {
   });
 }
 
+// -----------------------------
+// Send Both Emails
+// -----------------------------
 export async function sendOrderEmails(params: OrderEmailParams) {
   await Promise.all([
-    sendCustomerOrderEmail(params),
-    sendAdminNewOrderEmail(params),
+    sendCustomerOrderEmail(params).catch((err) =>
+      console.error("❌ Erreur email client:", err.message)
+    ),
+
+    sendAdminNewOrderEmail(params).catch((err) =>
+      console.error("❌ Erreur email admin:", err.message)
+    ),
   ]);
 }
+
