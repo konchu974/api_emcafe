@@ -39,8 +39,26 @@ router.put("/users/:id", authMiddleware, userController.updateUser);
 router.delete("/users/:id", authMiddleware, adminMiddleware, userController.delete);
 
 /* ==================== PRODUCTS ==================== */
+/* ==================== PRODUCT ROUTES ==================== */
+
+
+router.get('/products/full', productController.getAllProductsWithVariants); 
+
+router.get('/products/:id/full', productController.getProductWithVariants); 
+
 router.get("/products", productController.getAllProducts);
 router.get("/products/featured", productController.getFeaturedProducts);
+
+router.get('/size/:size', productController.getProductsBySize);
+
+
+router.get(
+  "/products/low-stock",
+  authMiddleware,
+  adminMiddleware,
+  productController.getLowStockProducts
+);
+
 router.get("/products/by-intensity", productController.getProductsByIntensity);
 router.get("/products/:id", productController.getProductById);
 
@@ -60,7 +78,12 @@ router.put(
   productController.updateProduct
 );
 
-router.delete("/products/:id", authMiddleware, adminMiddleware, productController.deleteProduct);
+router.delete(
+  "/products/:id",
+  authMiddleware,
+  adminMiddleware,
+  productController.deleteProduct
+);
 
 router.patch(
   "/products/:id/stock",
