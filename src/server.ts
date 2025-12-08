@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3000;
    1. CORS
 ------------------------------------------------------------- */
 app.use(cors({
-  origin: ['http://localhost:4321', 'https://emcaffe.shop'],
+  origin: ['http://localhost:4321', 'https://emcaffe.shop', 'https://emcaffe-front.onrender.com'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
 }));
