@@ -12,82 +12,82 @@ export class OrderService {
   private orderItemRepository = AppDataSource.getRepository(OrderItem);
   private productRepository = AppDataSource.getRepository(Product);
 
-  async createOrder(createOrderDto: CreateOrderDto) {
-    const queryRunner = AppDataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+  // src/services/OrderService.ts
 
-    try {
-      console.log('📦 Création commande pour:', createOrderDto.id_user_account);
+async createOrder(createOrderDto: CreateOrderDto) {
+  const queryRunner = AppDataSource.createQueryRunner();
+  await queryRunner.connect();
+  await queryRunner.startTransaction();
 
-      // ✅ 1. Créer la commande
-      const order = queryRunner.manager.create(Order, {
-        id_user_account: createOrderDto.id_user_account,
-        status: 'PENDING',
-        total: 0,
-        delivery_address: createOrderDto.delivery_address,
-        delivery_city: createOrderDto.delivery_city,
-        delivery_postal_code: createOrderDto.delivery_postal_code,
-        delivery_phone: createOrderDto.delivery_phone,
-        notes: createOrderDto.notes,
+  try {
+    console.log('📦 Création commande pour:', createOrderDto.id_user_account);
+
+    // ✅ Créer la commande avec email
+    const order = queryRunner.manager.create(Order, {
+      id_user_account: createOrderDto.id_user_account,
+      status: 'PENDING',
+      total: 0,
+      delivery_address: createOrderDto.delivery_address,
+      delivery_city: createOrderDto.delivery_city,
+      delivery_postal_code: createOrderDto.delivery_postal_code,
+      delivery_phone: createOrderDto.delivery_phone,
+      email: createOrderDto.email, // ✅ Ajouté
+      notes: createOrderDto.notes,
+    });
+
+    const savedOrder = await queryRunner.manager.save(order);
+    console.log('✅ Commande créée:', savedOrder.id_order);
+
+    let totalAmount = 0;
+
+    for (const item of createOrderDto.items) {
+      const product = await queryRunner.manager.findOne(Product, {
+        where: { id_product: item.id_product },
       });
 
-      const savedOrder = await queryRunner.manager.save(order);
-      console.log('✅ Commande créée:', savedOrder.id_order);
-
-      let totalAmount = 0;
-
-      // ✅ 2. Créer les items
-      for (const item of createOrderDto.items) {
-        const product = await queryRunner.manager.findOne(Product, {
-          where: { id_product: item.id_product },
-        });
-
-        if (!product) {
-          throw new Error(`Produit ${item.id_product} non trouvé`);
-        }
-
-        if (product.stock < item.quantity) {
-          throw new Error(`Stock insuffisant pour ${product.name}`);
-        }
-
-        const subtotal = Number(product.price) * item.quantity;
-
-        // ✅ Créer l'order item avec unit_price
-        const orderItem = queryRunner.manager.create(OrderItem, {
-          id_order: savedOrder.id_order,
-          id_product: product.id_product,
-          quantity: item.quantity,
-          unit_price: Number(product.price), // ✅ Ajouté
-          subtotal: subtotal,
-        });
-
-        await queryRunner.manager.save(orderItem);
-
-        // ✅ Mettre à jour le stock
-        product.stock -= item.quantity;
-        await queryRunner.manager.save(product);
-
-        totalAmount += subtotal;
+      if (!product) {
+        throw new Error(`Produit ${item.id_product} non trouvé`);
       }
 
-      // ✅ 3. Mettre à jour le total
-      savedOrder.total = totalAmount;
-      await queryRunner.manager.save(savedOrder);
+      if (product.stock < item.quantity) {
+        throw new Error(`Stock insuffisant pour ${product.name}`);
+      }
 
-      console.log('✅ Total commande:', totalAmount);
+      const subtotal = Number(product.price) * item.quantity;
 
-      await queryRunner.commitTransaction();
+      const orderItem = queryRunner.manager.create(OrderItem, {
+        id_order: savedOrder.id_order,
+        id_product: product.id_product,
+        quantity: item.quantity,
+        unit_price: Number(product.price),
+        subtotal: subtotal,
+      });
 
-      return await this.getOrderById(savedOrder.id_order);
-    } catch (error) {
-      await queryRunner.rollbackTransaction();
-      console.error('❌ Erreur:', error);
-      throw error;
-    } finally {
-      await queryRunner.release();
+      await queryRunner.manager.save(orderItem);
+
+      product.stock -= item.quantity;
+      await queryRunner.manager.save(product);
+
+      totalAmount += subtotal;
     }
+
+    savedOrder.total = totalAmount;
+    await queryRunner.manager.save(savedOrder);
+
+    console.log('✅ Total commande:', totalAmount);
+
+    await queryRunner.commitTransaction();
+
+    return await this.getOrderById(savedOrder.id_order);
+  } catch (error) {
+    await queryRunner.rollbackTransaction();
+    console.error('❌ Erreur:', error);
+    throw error;
+  } finally {
+    await queryRunner.release();
   }
+}
+
 
   async getAllOrders() {
     return await this.orderRepository.find({

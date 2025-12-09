@@ -7,7 +7,8 @@ import {
   IsNumber, 
   Min, 
   IsOptional,
-  IsNotEmpty 
+  IsNotEmpty,
+  IsEmail 
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -31,7 +32,6 @@ export class CreateOrderDto {
   @Type(() => OrderItemDto)
   items!: OrderItemDto[];
 
-  // ✅ Champs optionnels de livraison (ceux qui existent dans votre BDD)
   @IsString()
   @IsOptional()
   delivery_address?: string;
@@ -47,6 +47,11 @@ export class CreateOrderDto {
   @IsString()
   @IsOptional()
   delivery_phone?: string;
+
+  // ✅ Ajout du champ email
+  @IsEmail()
+  @IsOptional()
+  email?: string;
 
   @IsString()
   @IsOptional()

@@ -35,7 +35,6 @@ export class Order {
   @JoinColumn({ name: 'id_user_account' })
   user!: UserAccount;
 
-  // ✅ Champs existants dans votre BDD
   @Column({ type: 'varchar', length: 50, default: 'PENDING' })
   status!: string;
 
@@ -54,6 +53,10 @@ export class Order {
   @Column({ type: 'varchar', length: 20, nullable: true })
   delivery_phone?: string;
 
+  // ✅ Ajout de la colonne email
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  email?: string;
+
   @Column({ type: 'text', nullable: true })
   notes?: string;
 
@@ -67,7 +70,6 @@ export class Order {
   })
   updated_at!: Date;
 
-  // ✅ Relations
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order, { cascade: true })
   orderItems!: OrderItem[];
 
