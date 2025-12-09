@@ -12,7 +12,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class OrderItemDto {
+export class CreateOrderItemDto {
   @IsString()
   @IsNotEmpty()
   id_product!: string;
@@ -29,31 +29,27 @@ export class CreateOrderDto {
 
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => OrderItemDto)
-  items!: OrderItemDto[];
+  @Type(() => CreateOrderItemDto)
+  items!: CreateOrderItemDto[];
 
-  @IsString()
   @IsOptional()
+  @IsString()
   delivery_address?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   delivery_city?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   delivery_postal_code?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   delivery_phone?: string;
 
-  // ✅ Ajout du champ email
-  @IsEmail()
   @IsOptional()
+  @IsEmail()
   email?: string;
 
-  @IsString()
-  @IsOptional()
-  notes?: string;
 }

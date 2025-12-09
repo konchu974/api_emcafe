@@ -12,7 +12,7 @@ export class OrderService {
   private orderItemRepository = AppDataSource.getRepository(OrderItem);
   private productRepository = AppDataSource.getRepository(Product);
 
-  // src/services/OrderService.ts
+  // src/services/OrderService.ts (méthode createOrder)
 
 async createOrder(createOrderDto: CreateOrderDto) {
   const queryRunner = AppDataSource.createQueryRunner();
@@ -20,9 +20,8 @@ async createOrder(createOrderDto: CreateOrderDto) {
   await queryRunner.startTransaction();
 
   try {
-    console.log('📦 Création commande pour:', createOrderDto.id_user_account);
+    console.log('🛒 Création commande pour user:', createOrderDto.id_user_account);
 
-    // ✅ Créer la commande avec email
     const order = queryRunner.manager.create(Order, {
       id_user_account: createOrderDto.id_user_account,
       status: 'PENDING',
@@ -31,8 +30,8 @@ async createOrder(createOrderDto: CreateOrderDto) {
       delivery_city: createOrderDto.delivery_city,
       delivery_postal_code: createOrderDto.delivery_postal_code,
       delivery_phone: createOrderDto.delivery_phone,
-      email: createOrderDto.email, // ✅ Ajouté
-      notes: createOrderDto.notes,
+      email: createOrderDto.email,
+      // ❌ notes supprimé
     });
 
     const savedOrder = await queryRunner.manager.save(order);

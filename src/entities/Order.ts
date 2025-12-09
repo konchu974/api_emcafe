@@ -7,8 +7,6 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
-  CreateDateColumn,
-  UpdateDateColumn,
   OneToOne
 } from 'typeorm';
 import { UserAccount } from './UserAccount';  
@@ -53,12 +51,8 @@ export class Order {
   @Column({ type: 'varchar', length: 20, nullable: true })
   delivery_phone?: string;
 
-  // ✅ Ajout de la colonne email
-  @Column({ type: 'varchar', length: 150, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   email?: string;
-
-  @Column({ type: 'text', nullable: true })
-  notes?: string;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at!: Date;
