@@ -1,3 +1,5 @@
+// src/services/OrderService.ts
+
 import { AppDataSource } from '../config/database';
 import { Order } from '../entities/Order';
 import { OrderItem } from '../entities/OrderItem';
@@ -16,17 +18,26 @@ export class OrderService {
     await queryRunner.startTransaction();
 
     try {
-      // Créer la commande
+      console.log('📦 Création commande pour:', createOrderDto.id_user_account);
+
+      // ✅ 1. Créer la commande
       const order = queryRunner.manager.create(Order, {
         id_user_account: createOrderDto.id_user_account,
         status: 'PENDING',
         total: 0,
+        delivery_address: createOrderDto.delivery_address,
+        delivery_city: createOrderDto.delivery_city,
+        delivery_postal_code: createOrderDto.delivery_postal_code,
+        delivery_phone: createOrderDto.delivery_phone,
+        notes: createOrderDto.notes,
       });
-      await queryRunner.manager.save(order);
 
-      let total = 0;
+      const savedOrder = await queryRunner.manager.save(order);
+      console.log('✅ Commande créée:', savedOrder.id_order);
 
-      // Créer les items de commande
+      let totalAmount = 0;
+
+      // ✅ 2. Créer les items
       for (const item of createOrderDto.items) {
         const product = await queryRunner.manager.findOne(Product, {
           where: { id_product: item.id_product },
@@ -37,35 +48,41 @@ export class OrderService {
         }
 
         if (product.stock < item.quantity) {
-          throw new Error(`Stock insuffisant pour le produit ${product.name}`);
+          throw new Error(`Stock insuffisant pour ${product.name}`);
         }
 
-        const subtotal = product.price * item.quantity;
-        total += subtotal;
+        const subtotal = Number(product.price) * item.quantity;
 
-        // Créer l'order item
+        // ✅ Créer l'order item avec unit_price
         const orderItem = queryRunner.manager.create(OrderItem, {
-          id_order: order.id_order,
+          id_order: savedOrder.id_order,
+          id_product: product.id_product,
           quantity: item.quantity,
-          subtotal,
+          unit_price: Number(product.price), // ✅ Ajouté
+          subtotal: subtotal,
         });
+
         await queryRunner.manager.save(orderItem);
 
-    
-        // Mettre à jour le stock
+        // ✅ Mettre à jour le stock
         product.stock -= item.quantity;
         await queryRunner.manager.save(product);
+
+        totalAmount += subtotal;
       }
 
-      // Mettre à jour le total de la commande
-      order.total = total;
-      await queryRunner.manager.save(order);
+      // ✅ 3. Mettre à jour le total
+      savedOrder.total = totalAmount;
+      await queryRunner.manager.save(savedOrder);
+
+      console.log('✅ Total commande:', totalAmount);
 
       await queryRunner.commitTransaction();
 
-      return await this.getOrderById(order.id_order);
+      return await this.getOrderById(savedOrder.id_order);
     } catch (error) {
       await queryRunner.rollbackTransaction();
+      console.error('❌ Erreur:', error);
       throw error;
     } finally {
       await queryRunner.release();
@@ -74,14 +91,15 @@ export class OrderService {
 
   async getAllOrders() {
     return await this.orderRepository.find({
-      relations: ['user', 'orderItems', 'orderItems.orderItemProducts', 'orderItems.orderItemProducts.product'],
+      relations: ['user', 'orderItems', 'orderItems.product'],
+      order: { created_at: 'DESC' },
     });
   }
 
   async getOrderById(id: string) {
     const order = await this.orderRepository.findOne({
       where: { id_order: id },
-      relations: ['user', 'orderItems', 'orderItems.orderItemProducts', 'orderItems.orderItemProducts.product'],
+      relations: ['user', 'orderItems', 'orderItems.product'],
     });
 
     if (!order) {
@@ -94,7 +112,7 @@ export class OrderService {
   async getOrdersByUserId(userId: string) {
     return await this.orderRepository.find({
       where: { id_user_account: userId },
-      relations: ['orderItems', 'orderItems.orderItemProducts', 'orderItems.orderItemProducts.product'],
+      relations: ['orderItems', 'orderItems.product'],
       order: { created_at: 'DESC' },
     });
   }

@@ -25,27 +25,24 @@ export enum OrderStatus {
 
 @Entity({ name: 'order' })
 export class Order {
-  @PrimaryGeneratedColumn("uuid")
+  @PrimaryGeneratedColumn('uuid')
   id_order!: string;
+
+  @Column({ type: 'char', length: 36 })
+  id_user_account!: string;
 
   @ManyToOne(() => UserAccount, (user) => user.orders, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'id_user_account' })
   user!: UserAccount;
 
-  @Column({ type: 'char', length: 36, name: 'id_user_account' })
-  id_user_account!: string;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
-  total!: number;
-
-  @Column({
-    type: 'varchar',
-    length: 50,
-    default: OrderStatus.PENDING
-  })
+  // ✅ Champs existants dans votre BDD
+  @Column({ type: 'varchar', length: 50, default: 'PENDING' })
   status!: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.00 })
+  total!: number;
+
+  @Column({ type: 'text', nullable: true })
   delivery_address?: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
@@ -57,19 +54,23 @@ export class Order {
   @Column({ type: 'varchar', length: 20, nullable: true })
   delivery_phone?: string;
 
+  @Column({ type: 'text', nullable: true })
+  notes?: string;
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  created_at!: Date;
+
+  @Column({ 
+    type: 'timestamp', 
+    default: () => 'CURRENT_TIMESTAMP',
+    onUpdate: 'CURRENT_TIMESTAMP'
+  })
+  updated_at!: Date;
+
+  // ✅ Relations
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order, { cascade: true })
   orderItems!: OrderItem[];
 
   @OneToOne(() => Payment, (payment) => payment.order, { nullable: true })
   payment?: Payment;
-
-  @CreateDateColumn({ type: 'datetime' })
-  created_at!: Date;
-
-  @UpdateDateColumn({ type: 'datetime' })
-  updated_at!: Date;
-
-  @Column({ type: "varchar", length: 150, nullable: true })
-email: string;
-
 }

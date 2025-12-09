@@ -18,6 +18,7 @@ import {
 } from "../controllers/paymentController";
 
 import { VariantController } from "../controllers/VariantController";
+import { CreateOrderDto } from "../dtos/order/CreateOrderDto";
 
 const router = Router();
 
@@ -97,7 +98,7 @@ router.patch(
 router.post(
   "/orders",
   authMiddleware,
-  validationMiddleware(UpdateOrderStatusDto),
+  validationMiddleware(CreateOrderDto),
   orderController.createOrder
 );
 
