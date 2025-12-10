@@ -108,6 +108,18 @@ async createOrder(createOrderDto: CreateOrderDto) {
     return order;
   }
 
+  async trackOrder(orderId: string, postalCode: string): Promise<Order | null> {
+    const order = await this.orderRepository.findOne({
+      where: { 
+        id_order: orderId,
+        delivery_postal_code: postalCode
+      },
+      relations: ['orderItems', 'orderItems.product']
+    });
+
+    return order;
+  }
+
   async getOrdersByUserId(userId: string) {
     return await this.orderRepository.find({
       where: { id_user_account: userId },

@@ -104,6 +104,7 @@ router.post(
 
 router.get("/orders", authMiddleware, adminMiddleware, orderController.getAllOrders);
 router.get("/orders/my-orders", authMiddleware, orderController.getMyOrders);
+router.post('/track', orderController.trackOrder); 
 router.get("/orders/:id", authMiddleware, orderController.getOrderById);
 
 router.patch(
