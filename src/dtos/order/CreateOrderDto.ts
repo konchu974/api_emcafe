@@ -20,12 +20,16 @@ export class CreateOrderItemDto {
   @IsNumber()
   @Min(1)
   quantity!: number;
+
+  @IsString()
+  id_variant!: string;
 }
 
 export class CreateOrderDto {
   @IsString()
   @IsNotEmpty()
   id_user_account!: string;
+
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -53,3 +57,7 @@ export class CreateOrderDto {
   email?: string;
 
 }
+function IsUUID(): (target: CreateOrderDto, propertyKey: "id_variant") => void {
+  throw new Error('Function not implemented.');
+}
+

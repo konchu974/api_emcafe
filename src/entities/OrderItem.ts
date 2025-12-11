@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Order } from './Order';
 import { Product } from './Product';
+import { ProductVariant } from './ProductVariant';
 
 @Entity({ name: 'order_item' })
 export class OrderItem {
@@ -19,7 +20,10 @@ export class OrderItem {
   id_order!: string;
 
   @Column({ type: 'char', length: 36 })
-  id_product!: string;  // ✅ Cette colonne DOIT exister
+  id_product!: string;
+
+  @Column({ type: 'char', length: 36, nullable: true })
+  id_variant!: string | null;  // ✅ Nouvelle colonne pour le variant
 
   @Column({ type: 'int' })
   quantity!: number;
@@ -37,4 +41,8 @@ export class OrderItem {
   @ManyToOne(() => Product, (product) => product.orderItems, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'id_product' })
   product!: Product;
+
+  @ManyToOne(() => ProductVariant, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'id_variant' })
+  variant!: ProductVariant | null;  // ✅ Relation vers ProductVariant
 }
