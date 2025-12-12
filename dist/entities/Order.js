@@ -1,5 +1,4 @@
 "use strict";
-// src/entities/Order.ts
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -10,49 +9,38 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Order = exports.OrderStatus = void 0;
+exports.Order = void 0;
+// src/entities/Order.ts
 const typeorm_1 = require("typeorm");
-const UserAccount_1 = require("./UserAccount");
 const OrderItem_1 = require("./OrderItem");
 const Payment_1 = require("./Payment");
-var OrderStatus;
-(function (OrderStatus) {
-    OrderStatus["PENDING"] = "PENDING";
-    OrderStatus["CONFIRMED"] = "CONFIRMED";
-    OrderStatus["SHIPPED"] = "SHIPPED";
-    OrderStatus["DELIVERED"] = "DELIVERED";
-    OrderStatus["CANCELLED"] = "CANCELLED";
-})(OrderStatus || (exports.OrderStatus = OrderStatus = {}));
+const UserAccount_1 = require("./UserAccount");
 let Order = class Order {
 };
 exports.Order = Order;
 __decorate([
-    (0, typeorm_1.PrimaryGeneratedColumn)("uuid"),
+    (0, typeorm_1.PrimaryGeneratedColumn)('uuid'),
     __metadata("design:type", String)
 ], Order.prototype, "id_order", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'char', length: 36 }),
+    __metadata("design:type", String)
+], Order.prototype, "id_user_account", void 0);
 __decorate([
     (0, typeorm_1.ManyToOne)(() => UserAccount_1.UserAccount, (user) => user.orders, { onDelete: 'CASCADE' }),
     (0, typeorm_1.JoinColumn)({ name: 'id_user_account' }),
     __metadata("design:type", UserAccount_1.UserAccount)
 ], Order.prototype, "user", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'char', length: 36, name: 'id_user_account' }),
-    __metadata("design:type", String)
-], Order.prototype, "id_user_account", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ type: 'decimal', precision: 10, scale: 2 }),
-    __metadata("design:type", Number)
-], Order.prototype, "total", void 0);
-__decorate([
-    (0, typeorm_1.Column)({
-        type: 'varchar',
-        length: 50,
-        default: OrderStatus.PENDING
-    }),
+    (0, typeorm_1.Column)({ type: 'varchar', length: 50, nullable: true, default: 'PENDING' }),
     __metadata("design:type", String)
 ], Order.prototype, "status", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'varchar', length: 255, nullable: true }),
+    (0, typeorm_1.Column)({ type: 'decimal', precision: 10, scale: 2, default: 0.0 }),
+    __metadata("design:type", Number)
+], Order.prototype, "total", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
     __metadata("design:type", String)
 ], Order.prototype, "delivery_address", void 0);
 __decorate([
@@ -68,9 +56,57 @@ __decorate([
     __metadata("design:type", String)
 ], Order.prototype, "delivery_phone", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 100, nullable: true }),
+    __metadata("design:type", String)
+], Order.prototype, "delivery_country", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 150, nullable: true }),
+    __metadata("design:type", String)
+], Order.prototype, "email", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', nullable: true }),
+    __metadata("design:type", Number)
+], Order.prototype, "sendcloud_parcel_id", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 100, nullable: true }),
+    __metadata("design:type", String)
+], Order.prototype, "tracking_number", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 255, nullable: true }),
+    __metadata("design:type", String)
+], Order.prototype, "tracking_url", void 0);
+__decorate([
     (0, typeorm_1.Column)({ type: 'text', nullable: true }),
     __metadata("design:type", String)
-], Order.prototype, "notes", void 0);
+], Order.prototype, "label_url", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'boolean', default: false }),
+    __metadata("design:type", Boolean)
+], Order.prototype, "is_relay_delivery", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 100, nullable: true }),
+    __metadata("design:type", String)
+], Order.prototype, "relay_point_id", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 255, nullable: true }),
+    __metadata("design:type", String)
+], Order.prototype, "relay_point_name", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 100, nullable: true }),
+    __metadata("design:type", String)
+], Order.prototype, "relay_carrier", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' }),
+    __metadata("design:type", Date)
+], Order.prototype, "created_at", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        type: 'timestamp',
+        default: () => 'CURRENT_TIMESTAMP',
+        onUpdate: 'CURRENT_TIMESTAMP'
+    }),
+    __metadata("design:type", Date)
+], Order.prototype, "updated_at", void 0);
 __decorate([
     (0, typeorm_1.OneToMany)(() => OrderItem_1.OrderItem, (orderItem) => orderItem.order, { cascade: true }),
     __metadata("design:type", Array)
@@ -79,14 +115,6 @@ __decorate([
     (0, typeorm_1.OneToOne)(() => Payment_1.Payment, (payment) => payment.order, { nullable: true }),
     __metadata("design:type", Payment_1.Payment)
 ], Order.prototype, "payment", void 0);
-__decorate([
-    (0, typeorm_1.CreateDateColumn)({ type: 'datetime' }),
-    __metadata("design:type", Date)
-], Order.prototype, "created_at", void 0);
-__decorate([
-    (0, typeorm_1.UpdateDateColumn)({ type: 'datetime' }),
-    __metadata("design:type", Date)
-], Order.prototype, "updated_at", void 0);
 exports.Order = Order = __decorate([
-    (0, typeorm_1.Entity)({ name: 'order' })
+    (0, typeorm_1.Entity)({ name: 'order' }) // ou 'orders' si tu veux éviter le mot réservé
 ], Order);

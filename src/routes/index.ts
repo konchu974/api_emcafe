@@ -40,26 +40,17 @@ router.put("/users/:id", authMiddleware, userController.updateUser);
 router.delete("/users/:id", authMiddleware, adminMiddleware, userController.delete);
 
 /* ==================== PRODUCTS ==================== */
-/* ==================== PRODUCT ROUTES ==================== */
-
-
 router.get('/products/full', productController.getAllProductsWithVariants); 
-
 router.get('/products/:id/full', productController.getProductWithVariants); 
-
 router.get("/products", productController.getAllProducts);
 router.get("/products/featured", productController.getFeaturedProducts);
-
-router.get('/size/:size', productController.getProductsBySize);
-
-
+router.get('/products/size/:size', productController.getProductsBySize); // ✅ Ajout de /products/
 router.get(
   "/products/low-stock",
   authMiddleware,
   adminMiddleware,
   productController.getLowStockProducts
 );
-
 router.get("/products/by-intensity", productController.getProductsByIntensity);
 router.get("/products/:id", productController.getProductById);
 
@@ -95,17 +86,26 @@ router.patch(
 );
 
 /* ==================== ORDERS ==================== */
-router.post(
-  "/orders",
-  authMiddleware,
-  validationMiddleware(CreateOrderDto),
-  orderController.createOrder
-);
+// ✅ ORDRE IMPORTANT : routes spécifiques AVANT les routes avec paramètres
 
+// 1. Routes publiques (sans auth)
+router.post('/orders/track', orderController.trackOrder); // ✅ AVANT /orders/:id
+
+// 2. Routes protégées sans paramètres
+router.get("/orders/my-orders", authMiddleware, orderController.getMyOrders); // ✅ AVANT /orders/:id
+
+// 3. Routes admin sans paramètres
 router.get("/orders", authMiddleware, adminMiddleware, orderController.getAllOrders);
-router.get("/orders/my-orders", authMiddleware, orderController.getMyOrders);
-router.post('/track', orderController.trackOrder); 
+
+// 4. Routes avec paramètres
 router.get("/orders/:id", authMiddleware, orderController.getOrderById);
+
+router.post(
+  "/orders/:id/create-label",
+  authMiddleware,
+  adminMiddleware,
+  orderController.createLabel
+);
 
 router.patch(
   "/orders/:id/status",
@@ -115,7 +115,19 @@ router.patch(
   orderController.updateOrderStatus
 );
 
-router.delete("/orders/:id", authMiddleware, adminMiddleware, orderController.deleteOrder);
+router.delete(
+  "/orders/:id",
+  authMiddleware,
+  adminMiddleware,
+  orderController.deleteOrder
+);
+
+// 5. Création de commande (POST)
+router.post(
+  "/orders",
+  validationMiddleware(CreateOrderDto), // ✅ ENLEVER authMiddleware si commande invité
+  orderController.createOrder
+);
 
 /* ==================== PAYMENTS ==================== */
 router.post("/payments/card", createCardPayment);

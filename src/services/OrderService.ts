@@ -14,6 +14,9 @@ export class OrderService {
   private productRepository = AppDataSource.getRepository(Product);
   private variantRepository = AppDataSource.getRepository(ProductVariant);
 
+  /**
+   * Créer une commande
+   */
   async createOrder(createOrderDto: CreateOrderDto) {
     const queryRunner = AppDataSource.createQueryRunner();
     await queryRunner.connect();
@@ -23,15 +26,23 @@ export class OrderService {
       console.log('🛒 Création commande pour user:', createOrderDto.id_user_account);
 
       const order = queryRunner.manager.create(Order, {
-        id_user_account: createOrderDto.id_user_account,
-        status: 'PENDING',
-        total: 0,
-        delivery_address: createOrderDto.delivery_address,
-        delivery_city: createOrderDto.delivery_city,
-        delivery_postal_code: createOrderDto.delivery_postal_code,
-        delivery_phone: createOrderDto.delivery_phone,
-        email: createOrderDto.email,
-      });
+  id_user_account: createOrderDto.id_user_account,
+  status: 'PENDING',
+  total: 0,
+  // ✅ Delivery info (aligné avec la table)
+  delivery_address: createOrderDto.delivery_address,
+  delivery_city: createOrderDto.delivery_city,
+  delivery_postal_code: createOrderDto.delivery_postal_code,
+  delivery_country: createOrderDto.delivery_country || 'FR',
+  delivery_phone: createOrderDto.delivery_phone,
+  email: createOrderDto.email,
+  // Relay point (si applicable)
+  is_relay_delivery: createOrderDto.is_relay_delivery || false,
+  relay_point_id: createOrderDto.relay_point_id,
+  relay_point_name: createOrderDto.relay_point_name,
+  relay_carrier: createOrderDto.relay_carrier,
+});
+
 
       const savedOrder = await queryRunner.manager.save(order);
       console.log('✅ Commande créée:', savedOrder.id_order);
@@ -48,22 +59,22 @@ export class OrderService {
           throw new Error(`Produit ${item.id_product} non trouvé`);
         }
 
-        // ✅ Vérifier le variant (utiliser camelCase)
+        // ✅ Vérifier le variant
         const variant = await queryRunner.manager.findOne(ProductVariant, {
           where: { 
-            idVariant: item.id_variant,  // ✅ camelCase
-            productId: item.id_product,  // ✅ camelCase
-            isActive: true               // ✅ camelCase
+            idVariant: item.id_variant,
+            productId: item.id_product,
+            isActive: true
           },
         });
 
         if (!variant) {
           throw new Error(
-            `Variant ${item.id_variant} non trouvé ou inactif pour le produit ${product.name}`
+            `Variant ${item.id_variant} non trouvé ou inactif pour ${product.name}`
           );
         }
 
-        // ✅ Vérifier le stock du variant
+        // ✅ Vérifier le stock
         if (variant.stock < item.quantity) {
           throw new Error(
             `Stock insuffisant pour ${product.name} (${variant.format}). ` +
@@ -71,14 +82,14 @@ export class OrderService {
           );
         }
 
-        // ✅ Calculer le sous-total avec le prix du variant
+        // ✅ Calculer le sous-total
         const subtotal = Number(variant.price) * item.quantity;
 
-        // ✅ Créer l'OrderItem avec id_variant
+        // ✅ Créer l'OrderItem
         const orderItem = queryRunner.manager.create(OrderItem, {
           id_order: savedOrder.id_order,
           id_product: product.id_product,
-          id_variant: variant.idVariant,  // ✅ Utiliser idVariant (camelCase)
+          id_variant: variant.idVariant,
           quantity: item.quantity,
           unit_price: Number(variant.price),
           subtotal: subtotal,
@@ -86,7 +97,7 @@ export class OrderService {
 
         await queryRunner.manager.save(orderItem);
 
-        // ✅ Décrémenter le stock du variant
+        // ✅ Décrémenter le stock
         variant.stock -= item.quantity;
         await queryRunner.manager.save(variant);
 
@@ -105,13 +116,16 @@ export class OrderService {
       return await this.getOrderById(savedOrder.id_order);
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      console.error('❌ Erreur:', error);
+      console.error('❌ Erreur création commande:', error);
       throw error;
     } finally {
       await queryRunner.release();
     }
   }
 
+  /**
+   * Récupérer toutes les commandes (admin)
+   */
   async getAllOrders() {
     return await this.orderRepository.find({
       relations: ['user', 'orderItems', 'orderItems.product', 'orderItems.variant'],
@@ -119,6 +133,9 @@ export class OrderService {
     });
   }
 
+  /**
+   * Récupérer une commande par ID
+   */
   async getOrderById(id: string) {
     const order = await this.orderRepository.findOne({
       where: { id_order: id },
@@ -132,6 +149,9 @@ export class OrderService {
     return order;
   }
 
+  /**
+   * Suivre une commande (public)
+   */
   async trackOrder(orderId: string, postalCode: string): Promise<Order | null> {
     const order = await this.orderRepository.findOne({
       where: { 
@@ -144,6 +164,9 @@ export class OrderService {
     return order;
   }
 
+  /**
+   * Récupérer les commandes d'un utilisateur
+   */
   async getOrdersByUserId(userId: string) {
     return await this.orderRepository.find({
       where: { id_user_account: userId },
@@ -152,6 +175,9 @@ export class OrderService {
     });
   }
 
+  /**
+   * Mettre à jour le statut d'une commande
+   */
   async updateOrderStatus(id: string, updateOrderStatusDto: UpdateOrderStatusDto) {
     const order = await this.orderRepository.findOne({
       where: { id_order: id },
@@ -162,7 +188,7 @@ export class OrderService {
       throw new Error('Commande non trouvée');
     }
 
-    // ✅ Si la commande est annulée, remettre les stocks
+    // ✅ Si annulation, remettre les stocks
     if (updateOrderStatusDto.status === 'CANCELLED' && order.status !== 'CANCELLED') {
       for (const item of order.orderItems) {
         if (item.variant) {
@@ -177,6 +203,40 @@ export class OrderService {
     return await this.orderRepository.save(order);
   }
 
+  /**
+   * ✅ NOUVEAU : Mettre à jour les infos SendCloud
+   */
+  async updateSendCloudInfo(
+    orderId: string,
+    data: {
+      sendcloud_parcel_id?: number;
+      tracking_number?: string;
+      tracking_url?: string;
+      label_url?: string;
+    }
+  ): Promise<Order> {
+    const order = await this.getOrderById(orderId);
+
+    if (data.sendcloud_parcel_id) {
+      order.sendcloud_parcel_id = data.sendcloud_parcel_id;
+    }
+    if (data.tracking_number) {
+      order.tracking_number = data.tracking_number;
+    }
+    if (data.tracking_url) {
+      order.tracking_url = data.tracking_url;
+    }
+    if (data.label_url) {
+      order.label_url = data.label_url;
+    }
+
+    console.log(`📦 SendCloud mis à jour pour commande ${orderId}`);
+    return await this.orderRepository.save(order);
+  }
+
+  /**
+   * Supprimer une commande
+   */
   async deleteOrder(id: string) {
     const order = await this.orderRepository.findOne({
       where: { id_order: id },

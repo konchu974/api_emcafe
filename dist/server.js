@@ -7,6 +7,7 @@ require("reflect-metadata");
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const body_parser_1 = __importDefault(require("body-parser"));
 const database_1 = require("./config/database");
 const routes_1 = __importDefault(require("./routes"));
 const stripeWebhookController_1 = require("./controllers/stripeWebhookController");
@@ -15,111 +16,102 @@ dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
 /* -------------------------------------------------------------
-   1. CORS CONFIGURATION
+   1. CORS
 ------------------------------------------------------------- */
 app.use((0, cors_1.default)({
-    origin: 'http://localhost:4321', // Frontend Astro
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    credentials: true
+    origin: ['http://localhost:4321', 'https://emcaffe.shop', 'https://emcaffe-front.onrender.com'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    credentials: true,
 }));
 /* -------------------------------------------------------------
-   2. STRIPE WEBHOOK (AVANT express.json() !)
-   ⚠️ IMPORTANT : Doit être avant express.json()
+   1.5. LOGGING MIDDLEWARE (AVANT TOUT)
 ------------------------------------------------------------- */
-app.post('/api/webhooks/stripe', express_1.default.raw({ type: 'application/json' }), stripeWebhookController_1.stripeWebhook);
+app.use((req, res, next) => {
+    console.log('\n========================================');
+    console.log(`📨 ${new Date().toISOString()}`);
+    console.log(`📨 ${req.method} ${req.originalUrl}`);
+    console.log(`📨 Content-Type:`, req.headers['content-type']);
+    console.log(`📨 Origin:`, req.headers.origin);
+    next();
+});
 /* -------------------------------------------------------------
-   3. MIDDLEWARES GÉNÉRAUX
+   2. STRIPE WEBHOOK — MUST BE FIRST
+------------------------------------------------------------- */
+app.post("/api/webhooks/stripe", body_parser_1.default.raw({ type: "*/*" }), stripeWebhookController_1.stripeWebhook);
+/* -------------------------------------------------------------
+   3. NORMAL PARSERS (AFTER WEBHOOK)
 ------------------------------------------------------------- */
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 /* -------------------------------------------------------------
-   4. ROOT ROUTE
+   3.5. LOGGING BODY (APRÈS PARSERS)
 ------------------------------------------------------------- */
-app.get('/', (req, res) => {
-    res.json({
-        message: 'API E-commerce EMCA',
-        version: '1.0.0',
-        status: 'running',
-        endpoints: {
-            auth: '/api/auth',
-            users: '/api/users',
-            products: '/api/products',
-            orders: '/api/orders',
-            payments: '/api/payments',
-            relay: '/api/relay',
-            sendcloud: '/api/sendcloud'
-        }
-    });
+app.use((req, res, next) => {
+    if (req.body && Object.keys(req.body).length > 0) {
+        console.log(`📦 Body:`, JSON.stringify(req.body, null, 2));
+    }
+    console.log('========================================\n');
+    next();
 });
 /* -------------------------------------------------------------
-   5. HEALTH CHECK
+   4. ROUTES
 ------------------------------------------------------------- */
-app.get('/health', (req, res) => {
+app.get("/", (req, res) => {
     res.json({
-        status: 'OK',
+        message: "API E-commerce EMCA",
+        status: "running",
+    });
+});
+app.get("/health", (req, res) => {
+    console.log('✅ Health check appelé');
+    res.json({
+        status: "OK",
         timestamp: new Date().toISOString(),
-        database: database_1.AppDataSource.isInitialized ? 'connected' : 'disconnected'
+        database: database_1.AppDataSource.isInitialized ? "connected" : "disconnected",
     });
 });
+app.use("/api/sendcloud", sendcloudRoutes_1.default);
+app.use("/api", routes_1.default);
 /* -------------------------------------------------------------
-   6. API ROUTES
-------------------------------------------------------------- */
-app.use('/api/sendcloud', sendcloudRoutes_1.default);
-app.use('/api', routes_1.default);
-/* -------------------------------------------------------------
-   7. 404 HANDLER
+   5. 404
 ------------------------------------------------------------- */
 app.use((req, res) => {
+    console.log(`❌ 404 - Route introuvable: ${req.method} ${req.originalUrl}`);
     res.status(404).json({
-        error: 'Route non trouvée',
-        path: req.path,
-        method: req.method
+        error: "Route not found",
+        method: req.method,
+        url: req.originalUrl
     });
 });
 /* -------------------------------------------------------------
-   8. GLOBAL ERROR HANDLER
+   6. GLOBAL ERROR HANDLER
 ------------------------------------------------------------- */
 app.use((err, req, res, next) => {
-    console.error('❌ Erreur:', err);
-    const statusCode = err.statusCode || err.status || 500;
-    const message = err.message || 'Erreur serveur interne';
-    res.status(statusCode).json({
-        error: message,
-        ...(process.env.NODE_ENV === 'development' && {
-            stack: err.stack,
-            details: err.details
-        })
+    console.error("❌ Global error:", err);
+    res.status(err.statusCode || 500).json({
+        error: err.message || "Internal server error",
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
 });
 /* -------------------------------------------------------------
-   9. DATABASE + SERVER STARTUP
+   7. DB + SERVER
 ------------------------------------------------------------- */
 database_1.AppDataSource.initialize()
     .then(() => {
-    console.log('✅ Connexion à la base de données MySQL réussie');
+    console.log("✅ Database connected");
     app.listen(PORT, () => {
-        console.log('\n============================================');
-        console.log(`   🚀 Serveur démarré sur http://localhost:${PORT}`);
-        console.log(`   📦 Environnement: ${process.env.NODE_ENV || 'development'}`);
-        console.log('============================================\n');
-        console.log('📍 Endpoints disponibles:\n');
-        console.log('Authentification:');
-        console.log('   POST   /api/auth/register');
-        console.log('   POST   /api/auth/login');
-        console.log('   GET    /api/auth/profile\n');
-        console.log('Utilisateurs:');
-        console.log('   GET    /api/users (admin)');
-        console.log('   GET    /api/users/:id');
-        console.log('   DELETE /api/users/:id (admin)\n');
-        console.log('SendCloud:');
-        console.log('   GET    /api/sendcloud/service-points\n');
-        console.log('Relay:');
-        console.log('   ...    /api/relay/*\n');
-        console.log(`🏥 Health check: http://localhost:${PORT}/health\n`);
+        console.log('\n🚀 ========================================');
+        console.log(`🚀 Server running at http://localhost:${PORT}`);
+        console.log(`🚀 ========================================`);
+        console.log(`📍 Routes disponibles:`);
+        console.log(`   - GET    http://localhost:${PORT}/health`);
+        console.log(`   - POST   http://localhost:${PORT}/api/orders`);
+        console.log(`   - GET    http://localhost:${PORT}/api/products`);
+        console.log(`🚀 ========================================\n`);
     });
 })
     .catch((error) => {
-    console.error('❌ Erreur de connexion à la base de données:', error);
+    console.error("❌ DB Connection Error:", error);
     process.exit(1);
 });
 exports.default = app;

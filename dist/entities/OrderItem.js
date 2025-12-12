@@ -1,4 +1,5 @@
 "use strict";
+// src/entities/OrderItem.ts
 var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -13,6 +14,7 @@ exports.OrderItem = void 0;
 const typeorm_1 = require("typeorm");
 const Order_1 = require("./Order");
 const Product_1 = require("./Product");
+const ProductVariant_1 = require("./ProductVariant");
 let OrderItem = class OrderItem {
 };
 exports.OrderItem = OrderItem;
@@ -21,22 +23,29 @@ __decorate([
     __metadata("design:type", String)
 ], OrderItem.prototype, "id_order_item", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'int' }),
-    __metadata("design:type", Number)
-], OrderItem.prototype, "quantity", void 0);
-__decorate([
-    (0, typeorm_1.Column)({ type: 'decimal', precision: 15, scale: 2, nullable: true }),
-    __metadata("design:type", Number)
-], OrderItem.prototype, "subtotal", void 0);
-__decorate([
     (0, typeorm_1.Column)({ type: 'char', length: 36 }),
     __metadata("design:type", String)
 ], OrderItem.prototype, "id_order", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'char', length: 36 }) // ✅ Ajout de la colonne
-    ,
+    (0, typeorm_1.Column)({ type: 'char', length: 36 }),
     __metadata("design:type", String)
 ], OrderItem.prototype, "id_product", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'char', length: 36, nullable: true }),
+    __metadata("design:type", String)
+], OrderItem.prototype, "id_variant", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int' }),
+    __metadata("design:type", Number)
+], OrderItem.prototype, "quantity", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'decimal', precision: 10, scale: 2 }),
+    __metadata("design:type", Number)
+], OrderItem.prototype, "unit_price", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'decimal', precision: 10, scale: 2 }),
+    __metadata("design:type", Number)
+], OrderItem.prototype, "subtotal", void 0);
 __decorate([
     (0, typeorm_1.ManyToOne)(() => Order_1.Order, (order) => order.orderItems, { onDelete: 'CASCADE' }),
     (0, typeorm_1.JoinColumn)({ name: 'id_order' }),
@@ -47,6 +56,11 @@ __decorate([
     (0, typeorm_1.JoinColumn)({ name: 'id_product' }),
     __metadata("design:type", Product_1.Product)
 ], OrderItem.prototype, "product", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => ProductVariant_1.ProductVariant, { nullable: true, onDelete: 'SET NULL' }),
+    (0, typeorm_1.JoinColumn)({ name: 'id_variant' }),
+    __metadata("design:type", ProductVariant_1.ProductVariant)
+], OrderItem.prototype, "variant", void 0);
 exports.OrderItem = OrderItem = __decorate([
-    (0, typeorm_1.Entity)('order_item')
+    (0, typeorm_1.Entity)({ name: 'order_item' })
 ], OrderItem);
