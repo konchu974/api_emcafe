@@ -40,8 +40,8 @@ async function enrichItemsWithProductIds(items: any[]): Promise<any[]> {
       }
 
       return {
-        id_product: variant.product.id_product,    // ✅ Propriété camelCase
-        id_product_variant: variant.idVariant,    // ✅ Propriété camelCase
+        id_product: variant.product.id_product,   
+        id_variant: variant.idVariant,    
         quantity: item.quantity,
         unit_price: item.price || item.unit_price,
       };
