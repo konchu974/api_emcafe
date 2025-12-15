@@ -1,347 +1,224 @@
 // src/routes/sendcloudRoutes.ts
 import express, { Request, Response } from 'express';
+import fetch from 'node-fetch';
 import { authMiddleware } from '../middlewares/authMiddleware';
-import { 
-  createParcel, 
-  getParcel, 
-  getShippingMethods,
+import {
+  createParcel,
+  getParcel,
   cancelParcel,
   getParcelLabel
 } from '../services/sendcloudService';
 
 const router = express.Router();
 
+/* ======================================================
+   CONFIG
+====================================================== */
 const BASE_SERVICE_POINTS = 'https://servicepoints.sendcloud.sc/api/v2';
 
 /**
- * Helper Basic Auth pour service-points (REST API)
+ * Basic Auth pour Service Points API
  */
 function getAuthHeader(): string {
-  const publicKey = process.env.SENDCLOUD_PUBLIC_KEY || '';
-  const secretKey = process.env.SENDCLOUD_SECRET_KEY || '';
-  
+  const publicKey = process.env.SENDCLOUD_PUBLIC_KEY;
+  const secretKey = process.env.SENDCLOUD_SECRET_KEY;
+
   if (!publicKey || !secretKey) {
-    throw new Error('SENDCLOUD_PUBLIC_KEY and SENDCLOUD_SECRET_KEY must be set');
+    throw new Error('SENDCLOUD_PUBLIC_KEY et SENDCLOUD_SECRET_KEY requis');
   }
-  
-  const credentials = Buffer.from(`${publicKey}:${secretKey}`).toString('base64');
-  return `Basic ${credentials}`;
+
+  return (
+    'Basic ' +
+    Buffer.from(`${publicKey}:${secretKey}`).toString('base64')
+  );
 }
 
-// ========================================
-// 🗺️  POINTS RELAIS
-// ========================================
+/* ======================================================
+   🗺️  POINTS RELAIS
+====================================================== */
 
 /**
  * GET /api/sendcloud/service-points
- * Rechercher des points relais
  */
 router.get('/service-points', async (req: Request, res: Response) => {
   try {
     const country = (req.query.country as string) || 'FR';
     const city = (req.query.city as string) || '';
-    const postal_code = (req.query.postal_code as string) || (req.query.cp as string) || '';
-    const carrier = req.query.carrier as string;
+    const postal_code =
+      (req.query.postal_code as string) ||
+      (req.query.cp as string) ||
+      '';
+    const carrier = req.query.carrier as string | undefined;
 
-    // Validation
     if (!postal_code && !city) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        error: 'postal_code or city query param required' 
+        error: 'postal_code ou city requis'
       });
     }
 
-    // Construction URL
-    let url = `${BASE_SERVICE_POINTS}/service-points?country=${encodeURIComponent(country)}`;
+    let url = `${BASE_SERVICE_POINTS}/service-points?country=${country}`;
     if (city) url += `&city=${encodeURIComponent(city)}`;
-    if (postal_code) url += `&postal_code=${encodeURIComponent(postal_code)}`;
-    if (carrier) url += `&carrier=${encodeURIComponent(carrier)}`;
+    if (postal_code) url += `&postal_code=${postal_code}`;
+    if (carrier) url += `&carrier=${carrier}`;
 
-    console.log('🗺️  Recherche points relais:', { country, city, postal_code, carrier });
-
-    const resp = await fetch(url, {
+    const response = await fetch(url, {
       headers: {
         Authorization: getAuthHeader(),
-        Accept: 'application/json',
-        'X-Requested-With': '',
-      },
+        Accept: 'application/json'
+      }
     });
 
-    if (!resp.ok) {
-      const text = await resp.text();
-      console.error('❌ Erreur API SendCloud Service Points:', text);
-      return res.status(502).json({ 
+    if (!response.ok) {
+      return res.status(502).json({
         success: false,
-        error: 'Failed to fetch from SendCloud', 
-        status: resp.status, 
-        details: text 
+        error: await response.text()
       });
     }
 
-    const data: any[] = await resp.json();
+    const data: any[] = await response.json();
 
-    // Mapping des données
-    const mapped = data.map((p: any) => ({
+    const mapped = data.map((p) => ({
       id: p.id,
-      name: p.name || `${p.postal_code} ${p.city}`,
-      address: p.street || p.address || '',
-      address_2: p.house_number || '',
-      postal_code: p.postal_code || '',
-      city: p.city || '',
-      country: p.country || '',
-      carrier: p.carrier || null,
-      opening_hours: p.opening_hours || null,
-      latitude: p.latitude || null,
-      longitude: p.longitude || null,
-      distance: p.distance || null,
-      formatted_opening_times: p.formatted_opening_times || null,
+      name: p.name,
+      address: p.street,
+      postal_code: p.postal_code,
+      city: p.city,
+      country: p.country,
+      carrier: p.carrier,
+      opening_hours: p.opening_hours,
+      latitude: p.latitude,
+      longitude: p.longitude
     }));
 
-    console.log(`✅ ${mapped.length} point(s) relais trouvé(s)`);
-
-    return res.json({
+    res.json({
       success: true,
       count: mapped.length,
-      data: mapped,
+      data: mapped
     });
-
   } catch (err: any) {
-    console.error('❌ Erreur service-points:', err);
-    return res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: 'Internal server error',
-      details: err.message 
+      error: err.message
     });
   }
 });
 
-// ========================================
-// 📦 GESTION DES COLIS
-// ========================================
+/* ======================================================
+   📦 CRÉATION COLIS
+====================================================== */
 
 /**
  * POST /api/sendcloud/parcels
- * Créer un nouveau colis
  */
 router.post('/parcels', authMiddleware, async (req: Request, res: Response) => {
   try {
-    console.log('📦 Création d\'un colis...');
-    console.log('📋 Body reçu:', JSON.stringify(req.body, null, 2));
-
     const payload = req.body;
 
-    // Validation minimale
-    const requiredFields = ['name', 'address', 'city', 'postal_code', 'country'];
-    const missingFields = requiredFields.filter(field => !payload[field]);
-    
-    if (missingFields.length > 0) {
-      return res.status(400).json({ 
+    const required = ['name', 'address', 'city', 'postal_code', 'country', 'weight'];
+    const missing = required.filter((f) => !payload[f]);
+
+    if (missing.length > 0) {
+      return res.status(400).json({
         success: false,
-        error: 'Missing required fields',
-        missing: missingFields
+        error: 'Champs manquants',
+        missing
       });
     }
 
-    // Validation email/telephone (au moins un requis)
     if (!payload.email && !payload.telephone) {
       return res.status(400).json({
         success: false,
-        error: 'Either email or telephone is required'
+        error: 'email ou telephone requis'
       });
     }
 
-    // Créer le colis via le service
     const parcel = await createParcel(payload);
 
-    console.log('✅ Colis créé avec succès:', parcel.id);
-
-    return res.status(201).json({
+    res.status(201).json({
       success: true,
       data: {
         id: parcel.id,
-        tracking_number: parcel.tracking_number || null,
-        tracking_url: parcel.tracking_url || null,
-        status: {
-          id: parcel.status?.id || null,
-          message: parcel.status?.message || 'Unknown',
-        },
-        carrier: parcel.carrier ? {
-          code: parcel.carrier.code || null,
-          name: parcel.carrier.name || null,
-        } : null,
-        label: {
-          label_printer: parcel.label?.label_printer || null,
-          normal_printer: parcel.label?.normal_printer?.[0] || null,
-        },
         order_number: parcel.order_number,
-        to_name: parcel.name,
-        to_address: parcel.address,
-        to_city: parcel.city,
-        to_postal_code: parcel.postal_code,
-        to_country: parcel.country,
-        weight: parcel.weight,
-        created_at: parcel.created_at,
-      },
+        tracking_number: parcel.tracking_number,
+        tracking_url: parcel.tracking_url,
+        status: parcel.status?.message,
+        label: {
+          a6: parcel.label?.label_printer ?? null,
+          a4: parcel.label?.normal_printer?.[0] ?? null
+        },
+        created_at: parcel.created_at
+      }
     });
-
   } catch (err: any) {
-    console.error('❌ Erreur création colis:', err.message);
-    return res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: err.message || 'Internal server error' 
+      error: err.message
     });
   }
 });
 
-/**
- * GET /api/sendcloud/parcels/:id
- * Récupérer les détails d'un colis
- */
-router.get('/parcels/:id', authMiddleware, async (req: Request, res: Response) => {
+/* ======================================================
+   📦 GET COLIS
+====================================================== */
+
+router.get('/parcels/:id', authMiddleware, async (req, res) => {
   try {
-    const parcelId = parseInt(req.params.id, 10);
-    
-    if (isNaN(parcelId)) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Invalid parcel ID' 
-      });
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ success: false, error: 'ID invalide' });
     }
 
-    console.log(`📦 Récupération du colis ${parcelId}...`);
-
-    const parcel = await getParcel(parcelId);
-
-    return res.json({
-      success: true,
-      data: parcel,
-    });
-
+    const parcel = await getParcel(id);
+    res.json({ success: true, data: parcel });
   } catch (err: any) {
-    console.error('❌ Erreur récupération colis:', err.message);
-    
-    if (err.message.includes('404')) {
-      return res.status(404).json({ 
-        success: false,
-        error: 'Parcel not found' 
-      });
-    }
-    
-    return res.status(500).json({ 
-      success: false,
-      error: 'Failed to fetch parcel', 
-      details: err.message 
-    });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-/**
- * GET /api/sendcloud/parcels/:id/label
- * Récupérer l'étiquette d'un colis
- */
-router.get('/parcels/:id/label', authMiddleware, async (req: Request, res: Response) => {
+/* ======================================================
+   🏷️ ÉTIQUETTE
+====================================================== */
+
+router.get('/parcels/:id/label', authMiddleware, async (req, res) => {
   try {
-    const parcelId = parseInt(req.params.id, 10);
+    const id = Number(req.params.id);
     const format = (req.query.format as 'A4' | 'A6') || 'A4';
-    
-    if (isNaN(parcelId)) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Invalid parcel ID' 
-      });
-    }
 
-    console.log(`🏷️  Récupération de l'étiquette du colis ${parcelId} (format: ${format})...`);
+    const url = await getParcelLabel(id, format);
 
-    const labelUrl = await getParcelLabel(parcelId, format);
-
-    if (!labelUrl) {
+    if (!url) {
       return res.status(404).json({
         success: false,
-        error: 'Label not available for this parcel',
+        error: 'Étiquette non disponible'
       });
     }
 
-    return res.json({
+    res.json({
       success: true,
-      data: {
-        label_url: labelUrl,
-        format: format,
-      },
+      data: { label_url: url, format }
     });
-
   } catch (err: any) {
-    console.error('❌ Erreur récupération étiquette:', err.message);
-    return res.status(500).json({ 
-      success: false,
-      error: 'Failed to fetch label', 
-      details: err.message 
-    });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
-/**
- * POST /api/sendcloud/parcels/:id/cancel
- * Annuler un colis
- */
-router.post('/parcels/:id/cancel', authMiddleware, async (req: Request, res: Response) => {
+/* ======================================================
+   🗑️ ANNULATION
+====================================================== */
+
+router.post('/parcels/:id/cancel', authMiddleware, async (req, res) => {
   try {
-    const parcelId = parseInt(req.params.id, 10);
-    
-    if (isNaN(parcelId)) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Invalid parcel ID' 
-      });
-    }
+    const id = Number(req.params.id);
+    const result = await cancelParcel(id);
 
-    console.log(`🗑️  Annulation du colis ${parcelId}...`);
-
-    const result = await cancelParcel(parcelId);
-
-    return res.json({
+    res.json({
       success: true,
-      message: `Parcel ${parcelId} cancelled successfully`,
-      data: result,
+      message: 'Colis annulé',
+      data: result
     });
-
   } catch (err: any) {
-    console.error('❌ Erreur annulation colis:', err.message);
-    return res.status(500).json({ 
-      success: false,
-      error: 'Failed to cancel parcel', 
-      details: err.message 
-    });
-  }
-});
-
-// ========================================
-// 🚚 MÉTHODES D'EXPÉDITION
-// ========================================
-
-/**
- * GET /api/sendcloud/shipping-methods
- * Liste les méthodes d'expédition disponibles
- */
-router.get('/shipping-methods', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    console.log('🚚 Récupération des méthodes d\'expédition...');
-
-    const methods = await getShippingMethods();
-
-    return res.json({
-      success: true,
-      count: methods.length,
-      data: methods,
-    });
-
-  } catch (err: any) {
-    console.error('❌ Erreur récupération méthodes expédition:', err.message);
-    return res.status(500).json({ 
-      success: false,
-      error: 'Failed to fetch shipping methods', 
-      details: err.message 
-    });
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
