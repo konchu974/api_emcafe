@@ -1,0 +1,120 @@
+%PDF-1.3
+%‚„œ”
+1 0 obj
+<<
+/Producer (pypdf)
+>>
+endobj
+2 0 obj
+<<
+/Type /Pages
+/Count 1
+/Kids [ 4 0 R ]
+>>
+endobj
+3 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+4 0 obj
+<<
+/Type /Page
+/Resources <<
+/Font <<
+/F1 5 0 R
+/F2 6 0 R
+>>
+/ProcSet [ /ImageB /ImageC /ImageI /PDF /Text ]
+>>
+/MediaBox [ 0.0 0.0 595.275591 841.889764 ]
+/Contents 7 0 R
+/Annots [ ]
+/Parent 2 0 R
+>>
+endobj
+5 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+>>
+endobj
+6 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+>>
+endobj
+7 0 obj
+<<
+/Length 429
+>>
+stream
+q
+0.00000000000000006123234 1 -1 0.00000000000000006123234 297 420 cm
+0.0 0.0 419.53 297.64 re
+W
+n
+2 J
+0.57 w
+BT
+/F1 8 Tf
+ET
+BT
+12.76 274.83 Td
+(EMPORIO DU CAFE\054 17 BIS ROUTE DU BURGAUD\054 82600 AUCAMVILLE) Tj
+ET
+BT
+/F1 10 Tf
+ET
+BT
+175.75 175.58 Td
+(Jean Dupont) Tj
+ET
+BT
+175.75 162.83 Td
+(10 Rue de la Paix) Tj
+ET
+BT
+/F2 10 Tf
+ET
+BT
+175.75 150.07 Td
+(75001 PARIS) Tj
+ET
+BT
+/F1 10 Tf
+ET
+BT
+175.75 137.31 Td
+(France) Tj
+ET
+Q
+
+
+endstream
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000015 00000 n 
+0000000054 00000 n 
+0000000113 00000 n 
+0000000162 00000 n 
+0000000378 00000 n 
+0000000475 00000 n 
+0000000577 00000 n 
+trailer
+<<
+/Size 8
+/Root 3 0 R
+/Info 1 0 R
+>>
+startxref
+1057
+%%EOF
