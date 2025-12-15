@@ -1,198 +1,265 @@
 # ========================================
-# 🧪 TEST COMPLET : API EMCA + SENDCLOUD
+# 🧪 TEST COMPLET API SENDCLOUD - VERSION CORRIGÉE
 # ========================================
 
-Write-Host "`n═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "  🧪 TEST BACKEND EMCA + SENDCLOUD" -ForegroundColor White
-Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host ""
+$ErrorActionPreference = "Stop"
+$baseUrl = "http://localhost:3000"
 
-# ========================================
-# ÉTAPE 1 : Connexion
-# ========================================
-Write-Host "🔐 ÉTAPE 1 : Connexion à l'API EMCA" -ForegroundColor Yellow
-Write-Host "─────────────────────────────────────────────────────" -ForegroundColor Gray
-
-try {
-    $loginBody = @{
-        email = "Jean.Bonot@example.com"      # ⚠️ MODIFIER ICI
-        password = "motdepasse123" # ⚠️ MODIFIER ICI
-    } | ConvertTo-Json
-
-    $loginResponse = Invoke-RestMethod `
-        -Uri "https://api-emcafe-3.onrender.com/api/auth/login" `
-        -Method Post `
-        -ContentType "application/json; charset=utf-8" `
-        -Body ([System.Text.Encoding]::UTF8.GetBytes($loginBody))
-
-    $token = $loginResponse.token
-    
-    Write-Host "✅ Connexion réussie !" -ForegroundColor Green
-    Write-Host "   Token: $($token.Substring(0,50))..." -ForegroundColor Gray
-    Write-Host "   User : $($loginResponse.user.email)" -ForegroundColor White
-    Write-Host ""
-
-} catch {
-    Write-Host "❌ ERREUR de connexion" -ForegroundColor Red
-    Write-Host "Message: $($_.Exception.Message)" -ForegroundColor Red
-    
-    if ($_.Exception.Response) {
-        $result = $_.Exception.Response.GetResponseStream()
-        $reader = New-Object System.IO.StreamReader($result)
-        $body = $reader.ReadToEnd()
-        Write-Host "Détails: $body" -ForegroundColor Gray
-    }
-    exit
+# Codes couleur
+function Write-Success { Write-Host "✅ $args" -ForegroundColor Green }
+function Write-Error { Write-Host "❌ $args" -ForegroundColor Red }
+function Write-Info { Write-Host "ℹ️  $args" -ForegroundColor Cyan }
+function Write-Warning { Write-Host "⚠️  $args" -ForegroundColor Yellow }
+function Write-Step { 
+    Write-Host "`n========================================" -ForegroundColor Magenta
+    Write-Host "🔹 $args" -ForegroundColor Magenta
+    Write-Host "========================================" -ForegroundColor Magenta 
 }
 
-# ========================================
-# ÉTAPE 2 : Récupérer une commande
-# ========================================
-Write-Host "📦 ÉTAPE 2 : Récupération d'une commande" -ForegroundColor Yellow
-Write-Host "─────────────────────────────────────────────────────" -ForegroundColor Gray
+# Variables globales
+$script:authToken = $null
+$script:parcelId = $null
 
-try {
-    $ordersResponse = Invoke-RestMethod `
-        -Uri "https://api-emcafe-3.onrender.com/api/orders?limit=1" `
-        -Method Get `
-        -Headers @{ Authorization = "Bearer $token" }
-    
-    if ($ordersResponse.orders.Count -eq 0) {
-        Write-Host "⚠️ Aucune commande trouvée - Création d'une commande test..." -ForegroundColor Yellow
+# ========================================
+# 🔐 CONFIGURATION UTILISATEUR
+# ========================================
+Write-Step "🔐 CONFIGURATION"
+
+Write-Warning "Quel utilisateur voulez-vous utiliser ?"
+Write-Host "1) Créer un nouvel utilisateur admin"
+Write-Host "2) Utiliser l'utilisateur invité (invite@invite.com)"
+Write-Host "3) Utiliser mes identifiants personnalisés"
+$choice = Read-Host "Votre choix (1/2/3)"
+
+switch ($choice) {
+    "1" {
+        # Créer un admin
+        Write-Info "Création d'un utilisateur admin..."
+        $adminPayload = @{
+            email = "admin@emcafe.fr"
+            password = "Admin123!"
+            firstName = "Admin"
+            lastName = "System"
+            role = "ADMIN"
+        } | ConvertTo-Json
         
-        # Créer une commande test
-        $newOrderBody = @{
-            items = @(
-                @{
-                    product_id = 1
-                    quantity = 2
-                    price = 12.90
-                }
-            )
-            shipping_address = @{
-                name = "Test Client"
-                address = "10 Rue de Test"
-                city = "Paris"
-                postal_code = "75001"
-                country = "FR"
-                phone = "+33612345678"
-                email = "test@example.com"
-            }
-        } | ConvertTo-Json -Depth 5
-        
-        $createOrderResponse = Invoke-RestMethod `
-            -Uri "https://api-emcafe-3.onrender.com/api/orders" `
-            -Method Post `
-            -Headers @{ 
-                Authorization = "Bearer $token"
-                "Content-Type" = "application/json; charset=utf-8"
-            } `
-            -Body ([System.Text.Encoding]::UTF8.GetBytes($newOrderBody))
-        
-        $orderId = $createOrderResponse.order.id_order
-        Write-Host "✅ Commande créée : #$orderId" -ForegroundColor Green
-    } else {
-        $orderId = $ordersResponse.orders[0].id_order
-        Write-Host "✅ Commande trouvée : #$orderId" -ForegroundColor Green
-    }
-    
-    Write-Host ""
-
-} catch {
-    Write-Host "❌ ERREUR récupération commande" -ForegroundColor Red
-    Write-Host "Message: $($_.Exception.Message)" -ForegroundColor Red
-    exit
-}
-
-# ========================================
-# ÉTAPE 3 : Créer le colis SendCloud
-# ========================================
-Write-Host "📦 ÉTAPE 3 : Création du colis SendCloud" -ForegroundColor Yellow
-Write-Host "─────────────────────────────────────────────────────" -ForegroundColor Gray
-
-try {
-    $parcelBody = @{
-        order_id = $orderId
-        recipient = @{
-            name = "Sophie Martin"
-            email = "sophie.martin@example.com"
-            phone = "+33612345678"
-            address = "15 Boulevard Haussmann"
-            city = "Paris"
-            postal_code = "75009"
-            country = "FR"
-        }
-        items = @(
-            @{
-                description = "Café Arabica Bio 250g"
-                quantity = 2
-                weight = 0.250
-                value = 12.90
-                hs_code = "09011100"
-                origin_country = "FR"
-            },
-            @{
-                description = "Café Robusta 500g"
-                quantity = 1
-                weight = 0.500
-                value = 18.50
-                hs_code = "09011200"
-                origin_country = "FR"
-            }
-        )
-        weight = 1.0
-    } | ConvertTo-Json -Depth 10
-
-    Write-Host "📄 Payload envoyé:" -ForegroundColor Gray
-    Write-Host $parcelBody -ForegroundColor DarkGray
-    Write-Host ""
-
-    $parcelResponse = Invoke-RestMethod `
-        -Uri "https://api-emcafe-3.onrender.com/api/sendcloud/parcels" `
-        -Method Post `
-        -Headers @{ 
-            Authorization = "Bearer $token"
-            "Content-Type" = "application/json; charset=utf-8"
-        } `
-        -Body ([System.Text.Encoding]::UTF8.GetBytes($parcelBody))
-
-    Write-Host "✅ ✅ ✅ COLIS CRÉÉ AVEC SUCCÈS !" -ForegroundColor Green
-    Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Green
-    Write-Host "📦 ID SendCloud  : $($parcelResponse.data.parcel_id)" -ForegroundColor Cyan
-    Write-Host "📋 N° Tracking   : $($parcelResponse.data.tracking_number)" -ForegroundColor Yellow
-    Write-Host "🔗 URL Suivi     : $($parcelResponse.data.tracking_url)" -ForegroundColor Blue
-    Write-Host "🏷️  URL Étiquette : $($parcelResponse.data.label_url)" -ForegroundColor Magenta
-    Write-Host "📦 ID Commande   : $($parcelResponse.data.order_id)" -ForegroundColor White
-    Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Green
-    Write-Host ""
-
-} catch {
-    Write-Host "❌ ERREUR création colis" -ForegroundColor Red
-    Write-Host "─────────────────────────────────────────────────────" -ForegroundColor Gray
-    Write-Host "Message: $($_.Exception.Message)" -ForegroundColor Red
-    
-    if ($_.Exception.Response) {
         try {
-            $result = $_.Exception.Response.GetResponseStream()
-            $reader = New-Object System.IO.StreamReader($result)
-            $body = $reader.ReadToEnd()
-            $reader.Close()
-            $result.Close()
+            $registerResponse = Invoke-RestMethod -Uri "$baseUrl/api/auth/register" `
+                -Method Post `
+                -ContentType "application/json" `
+                -Body $adminPayload
             
-            Write-Host "`n📋 Réponse du serveur:" -ForegroundColor Yellow
-            try {
-                $errorJson = $body | ConvertFrom-Json
-                $errorJson | ConvertTo-Json -Depth 5 | Write-Host -ForegroundColor Red
-            } catch {
-                Write-Host $body -ForegroundColor Red
-            }
+            Write-Success "Admin créé: admin@emcafe.fr"
+            $script:userEmail = "admin@emcafe.fr"
+            $script:userPassword = "Admin123!"
         } catch {
-            Write-Host "Impossible de lire la réponse" -ForegroundColor Gray
+            Write-Warning "Admin existe déjà, connexion..."
+            $script:userEmail = "admin@emcafe.fr"
+            $script:userPassword = "Admin123!"
         }
     }
-    Write-Host ""
+    "2" {
+        # Utiliser l'invité
+        Write-Info "Utilisation du compte invité..."
+        $script:userEmail = "invite@invite.com"
+        $script:userPassword = "Passing3-Scuba4-Durably6-Judge6"
+    }
+    "3" {
+        # Identifiants personnalisés
+        $script:userEmail = Read-Host "Email"
+        $script:userPassword = Read-Host "Mot de passe" -AsSecureString
+        $script:userPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto(
+            [Runtime.InteropServices.Marshal]::SecureStringToBSTR($script:userPassword)
+        )
+    }
+    default {
+        Write-Error "Choix invalide"
+        exit 1
+    }
 }
 
-Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
-Write-Host "  🏁 Tests terminés" -ForegroundColor White
-Write-Host "═══════════════════════════════════════════════════════" -ForegroundColor Cyan
+# ========================================
+# 1️⃣ HEALTH CHECK
+# ========================================
+Write-Step "1️⃣ HEALTH CHECK"
+
+try {
+    $health = Invoke-RestMethod -Uri "$baseUrl/health" -Method Get
+    Write-Success "Server is running"
+    Write-Info "Timestamp: $($health.timestamp)"
+} catch {
+    Write-Error "Server is not running! Start it with: npm run dev"
+    exit 1
+}
+
+# ========================================
+# 2️⃣ AUTHENTIFICATION
+# ========================================
+Write-Step "2️⃣ AUTHENTIFICATION"
+
+$loginPayload = @{
+    email = $script:userEmail
+    password = $script:userPassword
+} | ConvertTo-Json
+
+try {
+    Write-Info "Connexion avec: $script:userEmail"
+    
+    $authResponse = Invoke-RestMethod -Uri "$baseUrl/api/auth/login" `
+        -Method Post `
+        -ContentType "application/json" `
+        -Body $loginPayload
+    
+    $script:authToken = $authResponse.token
+    Write-Success "Authentification réussie"
+    Write-Info "Token: $($script:authToken.Substring(0, 20))..."
+    Write-Info "User ID: $($authResponse.user.id_user_account)"
+} catch {
+    Write-Error "Authentification échouée"
+    Write-Error "Détails: $($_.Exception.Message)"
+    Write-Warning "Vérifiez que l'utilisateur existe dans la base de données"
+    exit 1
+}
+
+# Headers avec authentification
+$headers = @{
+    "Authorization" = "Bearer $script:authToken"
+    "Content-Type" = "application/json"
+}
+
+# ========================================
+# 3️⃣ RÉCUPÉRATION DES MÉTHODES D'EXPÉDITION
+# ========================================
+Write-Step "3️⃣ RÉCUPÉRATION DES MÉTHODES D'EXPÉDITION"
+
+try {
+    $shippingMethods = Invoke-RestMethod -Uri "$baseUrl/api/sendcloud/shipping-methods" `
+        -Method Get `
+        -Headers $headers
+    
+    if ($shippingMethods.success) {
+        Write-Success "$($shippingMethods.count) méthode(s) d'expédition disponible(s)"
+        
+        # Afficher les 5 premières
+        $shippingMethods.data | Select-Object -First 5 | ForEach-Object {
+            Write-Info "  - [$($_.id)] $($_.name) ($($_.carrier))"
+        }
+        
+        # Sauvegarder une méthode pour la suite
+        if ($shippingMethods.data.Count -gt 0) {
+            $script:defaultShippingMethod = $shippingMethods.data[0].id
+            Write-Info "Méthode par défaut: $script:defaultShippingMethod"
+        }
+    } else {
+        Write-Warning "Aucune méthode d'expédition configurée dans SendCloud"
+    }
+} catch {
+    Write-Error "Erreur récupération méthodes: $($_.Exception.Message)"
+    Write-Warning "Continuez quand même..."
+}
+
+# ========================================
+# 4️⃣ RECHERCHE DE POINTS RELAIS
+# ========================================
+Write-Step "4️⃣ RECHERCHE DE POINTS RELAIS"
+
+try {
+    $servicePoints = Invoke-RestMethod -Uri "$baseUrl/api/sendcloud/service-points?postal_code=75009&country=FR" `
+        -Method Get
+    
+    if ($servicePoints.success) {
+        Write-Success "$($servicePoints.count) point(s) relais trouvé(s)"
+        
+        # Afficher les 3 premiers
+        $servicePoints.data | Select-Object -First 3 | ForEach-Object {
+            Write-Info "  - [$($_.id)] $($_.name)"
+            Write-Info "    📍 $($_.address), $($_.postal_code) $($_.city)"
+            if ($_.distance) {
+                Write-Info "    📏 Distance: $($_.distance) m"
+            }
+        }
+        
+        # Sauvegarder un point relais pour la suite
+        if ($servicePoints.data.Count -gt 0) {
+            $script:relayPointId = $servicePoints.data[0].id
+            Write-Info "Point relais sélectionné: $script:relayPointId"
+        }
+    } else {
+        Write-Warning "Aucun point relais trouvé"
+    }
+} catch {
+    Write-Error "Erreur recherche points relais: $($_.Exception.Message)"
+}
+
+# ========================================
+# 5️⃣ CRÉATION D'UN COLIS (LIVRAISON À DOMICILE)
+# ========================================
+Write-Step "5️⃣ CRÉATION D'UN COLIS (LIVRAISON À DOMICILE)"
+
+$parcelPayload = @{
+    name = "Jean Dupont"
+    company_name = "Entreprise Test"
+    address = "123 Rue de la Paix"
+    address_2 = "Appartement 4B"
+    city = "Paris"
+    postal_code = "75009"
+    country = "FR"
+    email = "jean.dupont@example.com"
+    telephone = "+33612345678"
+    weight = "1000"
+    order_number = "TEST-$(Get-Date -Format 'yyyyMMddHHmmss')"
+    request_label = $true
+    apply_shipping_rules = $true
+    items = @(
+        @{
+            description = "Café Arabica Premium"
+            quantity = 2
+            weight = "500"
+            value = "29.90"
+            hs_code = "0901.21"
+            origin_country = "FR"
+            sku = "CAFE-ARABICA-001"
+        }
+    )
+} | ConvertTo-Json -Depth 10
+
+try {
+    Write-Info "Envoi de la requête de création..."
+    
+    $parcelResponse = Invoke-RestMethod -Uri "$baseUrl/api/sendcloud/parcels" `
+        -Method Post `
+        -Headers $headers `
+        -Body $parcelPayload
+    
+    if ($parcelResponse.success) {
+        $script:parcelId = $parcelResponse.data.id
+        Write-Success "Colis créé avec succès"
+        Write-Info "  🆔 ID: $($parcelResponse.data.id)"
+        Write-Info "  📦 Numéro de suivi: $($parcelResponse.data.tracking_number)"
+        Write-Info "  🔗 URL de suivi: $($parcelResponse.data.tracking_url)"
+        Write-Info "  📋 Statut: $($parcelResponse.data.status.message)"
+        Write-Info "  🚚 Transporteur: $($parcelResponse.data.carrier.name)"
+    } else {
+        Write-Error "Échec de la création: $($parcelResponse.error)"
+    }
+} catch {
+    Write-Error "Erreur création colis: $($_.Exception.Message)"
+    Write-Info "Réponse brute: $($_.ErrorDetails.Message)"
+}
+
+# ========================================
+# 📊 RÉSUMÉ FINAL
+# ========================================
+Write-Step "📊 RÉSUMÉ FINAL"
+
+Write-Success "Tests terminés !"
+Write-Info ""
+Write-Info "👤 Utilisateur: $script:userEmail"
+if ($script:parcelId) {
+    Write-Info "📦 Colis créé: ID $script:parcelId"
+}
+Write-Info ""
+Write-Info "🔗 Dashboard SendCloud:"
+Write-Info "   https://panel.sendcloud.sc/parcels"
+Write-Info ""
+Write-Success "✨ Backend SendCloud opérationnel !"
