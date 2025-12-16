@@ -242,7 +242,19 @@ router.get('/shipping-methods', authMiddleware, async (req: Request, res: Respon
     }
 
     const data = await response.json();
-    res.json(data);
+
+    // ⚡ Filtrage des méthodes "Colissimo Service Point"
+    const servicePointMethods = data.shipping_methods.filter(
+      (m: any) =>
+        m.name.includes('Service Point') &&
+        m.carrier === 'colissimo'
+    );
+
+    res.json({
+      success: true,
+      count: servicePointMethods.length,
+      shipping_methods: servicePointMethods,
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
