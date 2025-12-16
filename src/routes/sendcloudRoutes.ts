@@ -227,7 +227,7 @@ export default router;
 // GET /api/sendcloud/shipping-methods
 router.get('/shipping-methods', authMiddleware, async (req: Request, res: Response) => {
   try {
-    const response = await fetch('https://panel.sendcloud.sc/api/v2/shipping-methods', {
+    const response = await fetch('https://panel.sendcloud.sc/api/v2/shipping_methods', {
       headers: {
         Authorization: getAuthHeader(),
         Accept: 'application/json',
