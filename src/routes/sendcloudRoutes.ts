@@ -225,38 +225,43 @@ router.post('/parcels/:id/cancel', authMiddleware, async (req, res) => {
 export default router;
 
 // GET /api/sendcloud/shipping-methods
-router.get('/shipping-methods', authMiddleware, async (req: Request, res: Response) => {
+router.get('/shipping-methods', async (req: Request, res: Response) => {
   try {
+    const isRelay = req.query.isRelay === 'true'; // true = point relais, false = domicile
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'Token manquant' });
+
+    // Exemple : récupérer le panier côté back (ou le calculer ici)
+    const cart = req.body.cart || []; // à adapter selon comment tu envoies le panier
+    const totalWeight = cart.reduce((sum: number, item: any) => {
+      const match = item.format?.match(/(\d+)/);
+      const weight = match ? parseInt(match[1], 10) : 100; // grammes par défaut
+      return sum + weight * (item.quantity || 1);
+    }, 0);
+
+    // Récupérer toutes les méthodes SendCloud
     const response = await fetch('https://panel.sendcloud.sc/api/v2/shipping_methods', {
-      headers: {
-        Authorization: getAuthHeader(),
-        Accept: 'application/json',
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
-
-    if (!response.ok) {
-      return res.status(response.status).json({
-        success: false,
-        error: await response.text(),
-      });
-    }
-
     const data = await response.json();
+    const methods = data.shipping_methods || [];
 
-    // ⚡ Filtrage des méthodes "Colissimo Service Point"
-    const servicePointMethods = data.shipping_methods.filter(
-      (m: any) =>
-        m.name.includes('Service Point') &&
-        m.carrier === 'colissimo'
-    );
+    const weightKg = totalWeight / 1000;
 
-    res.json({
-      success: true,
-      count: servicePointMethods.length,
-      shipping_methods: servicePointMethods,
+    // Filtrer selon type livraison + poids + pays
+    const filtered = methods.filter((m: any) => {
+      const min = parseFloat(m.min_weight);
+      const max = parseFloat(m.max_weight);
+      const servicePointMatch = isRelay ? m.service_point_input === 'required' : m.service_point_input !== 'required';
+      const countryMatch = m.countries?.some((c: any) => c.iso_2 === 'FR');
+      const weightMatch = min <= weightKg && weightKg <= max;
+
+      return m.carrier === 'colissimo' && servicePointMatch && countryMatch && weightMatch;
     });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
+
+    res.json({ shipping_methods: filtered });
+  } catch (err) {
+    console.error('Erreur récupération méthodes SendCloud:', err);
+    res.status(500).json({ error: 'Impossible de récupérer les méthodes SendCloud' });
   }
 });
-
