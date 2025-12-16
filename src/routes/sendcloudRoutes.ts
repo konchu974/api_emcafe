@@ -223,3 +223,28 @@ router.post('/parcels/:id/cancel', authMiddleware, async (req, res) => {
 });
 
 export default router;
+
+// GET /api/sendcloud/shipping-methods
+router.get('/shipping-methods', authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const response = await fetch('https://panel.sendcloud.sc/api/v2/shipping-methods', {
+      headers: {
+        Authorization: getAuthHeader(),
+        Accept: 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: await response.text(),
+      });
+    }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
