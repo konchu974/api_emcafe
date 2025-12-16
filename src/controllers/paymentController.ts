@@ -183,12 +183,19 @@ export const createBankTransfer = async (req: Request, res: Response) => {
     const order = await paymentService.createBankPayment(createOrderDto);
 
     // ✅ ENVOYER L'EMAIL
-    sendOrderEmails({
-      customerEmail: createOrderDto.email,
-      orderId: order.id_order,
-      amount: order.total,
-      paymentMethod: "VIREMENT BANCAIRE",
-    }).catch((err) => console.error("❌ Erreur envoi email:", err.message));
+    const amount = Number(order.total);
+
+if (Number.isNaN(amount)) {
+  throw new Error(`Montant commande invalide: ${order.total}`);
+}
+
+await sendOrderEmails({
+  customerEmail: createOrderDto.email,
+  orderId: order.id_order,
+  amount,
+  paymentMethod: "VIREMENT BANCAIRE",
+});
+
 
     return res.status(201).json({
       success: true,
