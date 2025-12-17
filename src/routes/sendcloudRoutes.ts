@@ -225,38 +225,92 @@ router.post('/parcels/:id/cancel', authMiddleware, async (req, res) => {
 export default router;
 
 // GET /api/sendcloud/shipping-methods
-router.get('/shipping-methods', authMiddleware, async (req: Request, res: Response) => {
-  try {
-    const response = await fetch('https://panel.sendcloud.sc/api/v2/shipping_methods', {
-      headers: {
-        Authorization: getAuthHeader(),
-        Accept: 'application/json',
-      },
-    });
+router.get(
+  '/shipping-methods',
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    try {
+      const weightKg = Number(req.query.weightKg);
+      const isRelay = req.query.isRelay === 'true';
 
-    if (!response.ok) {
-      return res.status(response.status).json({
+      if (!weightKg || weightKg <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Poids invalide',
+        });
+      }
+
+      const response = await fetch(
+        'https://panel.sendcloud.sc/api/v2/shipping_methods',
+        {
+          headers: {
+            Authorization: getAuthHeader(),
+            Accept: 'application/json',
+          },
+        },
+      );
+
+      if (!response.ok) {
+        return res.status(response.status).json({
+          success: false,
+          error: await response.text(),
+        });
+      }
+
+      const data = await response.json();
+      const methods = data.shipping_methods ?? [];
+
+      console.log('📦 Méthodes SendCloud reçues:', methods.length);
+
+      const selectedMethod = methods.find((m: any) => {
+        const min = parseFloat(m.min_weight);
+        const max = parseFloat(m.max_weight);
+
+        const carrierMatch = m.carrier === 'colissimo';
+        const weightMatch = min <= weightKg && weightKg <= max;
+        const countryMatch = m.countries?.some(
+          (c: any) => c.iso_2 === 'FR',
+        );
+
+        const relayMatch = isRelay
+          ? m.service_point_input === 'required'
+          : m.service_point_input !== 'required';
+
+        return (
+          carrierMatch &&
+          weightMatch &&
+          countryMatch &&
+          relayMatch
+        );
+      });
+
+      if (!selectedMethod) {
+        return res.status(404).json({
+          success: false,
+          error: 'Aucune méthode compatible trouvée',
+        });
+      }
+
+      const fr = selectedMethod.countries.find(
+        (c: any) => c.iso_2 === 'FR',
+      );
+
+      res.json({
+        success: true,
+        method: {
+          id: selectedMethod.id,
+          name: selectedMethod.name,
+          price: Number(fr?.price ?? 0),
+        },
+      });
+    } catch (err: any) {
+      console.error('❌ SendCloud error:', err);
+      res.status(500).json({
         success: false,
-        error: await response.text(),
+        error: err.message,
       });
     }
+  },
+);
 
-    const data = await response.json();
-
-    // ⚡ Filtrage des méthodes "Colissimo Service Point"
-    const servicePointMethods = data.shipping_methods.filter(
-      (m: any) =>
-        m.name.includes('Service Point') &&
-        m.carrier === 'colissimo'
-    );
-
-    res.json({
-      success: true,
-      count: servicePointMethods.length,
-      shipping_methods: servicePointMethods,
-    });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
 
