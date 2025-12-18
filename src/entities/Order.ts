@@ -49,6 +49,9 @@ export class Order {
   @Column({ type: 'varchar', length: 150, nullable: true })
   email?: string;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.0 })
+delivery_cost!: number;
+
  // ==================== SENDCLOUD ====================
 @Column({ type: 'int', nullable: true })
 sendcloud_parcel_id?: number;

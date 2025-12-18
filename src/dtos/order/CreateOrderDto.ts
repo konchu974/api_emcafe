@@ -65,6 +65,10 @@ id_user_account!: string;
   delivery_phone!: string;
 
   @IsOptional()
+@IsNumber({}, { message: 'delivery_cost doit être un nombre' })
+delivery_cost?: number;
+
+  @IsOptional()
   @IsBoolean()
   is_relay_delivery?: boolean;
 
