@@ -41,6 +41,11 @@ export class OrderService {
   relay_point_id: createOrderDto.relay_point_id,
   relay_point_name: createOrderDto.relay_point_name,
   relay_carrier: createOrderDto.relay_carrier,
+
+   // SENDCLOUD
+  sendcloud_parcel_id: createOrderDto.sendcloud_parcel_id,
+  sendcloud_order_number: createOrderDto.sendcloud_order_number,
+  tracking_number: createOrderDto.tracking_number,
 });
 
 
