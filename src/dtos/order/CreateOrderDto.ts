@@ -83,6 +83,22 @@ id_user_account!: string;
   @IsOptional()
   @IsString()
   notes?: string;
+
+    // ==================== SENDCLOUD ====================
+
+  @IsOptional()
+  @IsNumber({}, { message: 'sendcloud_parcel_id doit être un nombre' })
+  sendcloud_parcel_id?: number;
+
+  @IsOptional()
+  @IsString()
+  sendcloud_order_number?: string;
+
+  @IsOptional()
+  @IsString()
+  tracking_number?: string;
+
 }
+
 
 

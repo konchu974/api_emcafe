@@ -85,6 +85,13 @@ export const createCardPayment = async (req: Request, res: Response) => {
       // Montant livraison
       delivery_cost: req.body.delivery_cost || 0,
       notes: req.body.notes || undefined,
+
+      // SENDCLOUD 
+      sendcloud_parcel_id: req.body.sendcloud_parcel_id,
+  sendcloud_order_number: req.body.sendcloud_order_number,
+  tracking_number: req.body.tracking_number
+
+      
     });
 
     // ✅ VALIDATION
@@ -160,6 +167,11 @@ export const createBankTransfer = async (req: Request, res: Response) => {
       // Montant livraison
       delivery_cost: req.body.delivery_cost || 0,
       notes: req.body.notes || undefined,
+
+      // SENDCLOUD 
+      sendcloud_parcel_id: req.body.sendcloud_parcel_id,
+  sendcloud_order_number: req.body.sendcloud_order_number,
+  tracking_number: req.body.tracking_number
     });
 
     // ✅ VALIDATION

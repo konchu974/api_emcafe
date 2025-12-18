@@ -49,18 +49,21 @@ export class Order {
   @Column({ type: 'varchar', length: 150, nullable: true })
   email?: string;
 
-  // ==================== SENDCLOUD ====================
-  @Column({ type: 'int', nullable: true })
-  sendcloud_parcel_id?: number;
+ // ==================== SENDCLOUD ====================
+@Column({ type: 'int', nullable: true })
+sendcloud_parcel_id?: number;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  tracking_number?: string;
+@Column({ type: 'varchar', length: 100, nullable: true })
+sendcloud_order_number?: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  tracking_url?: string;
+@Column({ type: 'varchar', length: 100, nullable: true })
+tracking_number?: string;
 
-  @Column({ type: 'text', nullable: true })
-  label_url?: string;
+@Column({ type: 'varchar', length: 255, nullable: true })
+tracking_url?: string;
+
+@Column({ type: 'text', nullable: true })
+label_url?: string;
 
   // ==================== RELAY ====================
   @Column({ type: 'boolean', default: false })
