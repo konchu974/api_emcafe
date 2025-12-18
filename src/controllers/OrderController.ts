@@ -154,18 +154,33 @@ createOrder = async (req: Request, res: Response): Promise<Response> => {
       }
 
       res.json({ 
-        success: true, 
-        data: {
-          id_order: order.id_order,
-          status: order.status,
-          created_at: order.created_at,
-          tracking_number: order.tracking_number,
-          tracking_url: order.tracking_url,
-          delivery_city: order.delivery_city,
-          is_relay_delivery: order.is_relay_delivery,
-          relay_point_name: order.relay_point_name
-        }
-      });
+  success: true, 
+  data: {
+    id_order: order.id_order,
+    status: order.status,
+    created_at: order.created_at,
+    tracking_number: order.tracking_number,
+    tracking_url: order.tracking_url,
+    delivery_city: order.delivery_city,
+    is_relay_delivery: order.is_relay_delivery,
+    relay_point_name: order.relay_point_name,
+    orderItems: order.orderItems?.map(item => ({
+      id: item.id_order_item,
+      quantity: item.quantity,
+      price: item.unit_price,
+      product: {
+        id: item.product.id_product,
+        name: item.product.name,
+        image_url: item.product.image_url
+      },
+      variant: item.variant ? {
+        id: item.variant.idVariant,
+        format: item.variant.format
+      } : null
+    }))
+  }
+});
+
     } catch (error: any) {
       console.error('❌ Erreur suivi commande:', error);
       res.status(500).json({
