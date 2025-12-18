@@ -41,7 +41,7 @@ type OrderEmailParams = {
 // Customer Email HTML
 // -----------------------------
 function customerHtml({ orderId, amount, paymentMethod }: OrderEmailParams) {
-  const trackUrl = `https://emcaffe-front.onrender.com/fr/track/${orderId}`; // URL pour suivre la commande
+  const trackUrl = `https://emcaffe-front.onrender.com/fr/track-order/${orderId}`; // URL pour suivre la commande
 
   return `
   <div style="font-family:Arial, sans-serif; line-height:1.6; color:#333;">
