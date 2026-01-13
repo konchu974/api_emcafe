@@ -31,6 +31,9 @@ const variantController = new VariantController();
 router.post("/auth/register", validationMiddleware(RegisterDto), userController.register);
 router.post("/auth/login", validationMiddleware(LoginDto), userController.login);
 
+router.post('/auth/request-password-reset', userController.requestPasswordReset);
+router.post('/auth/reset-password', userController.resetPassword);
+
 /* ==================== USERS ==================== */
 router.put("/users/address", authMiddleware, userController.updateAddress);
 router.get("/users", authMiddleware, userController.getAll);
@@ -38,6 +41,8 @@ router.get("/users/profile", authMiddleware, userController.getProfile);
 router.get("/users/:id", authMiddleware, userController.getById);
 router.put("/users/:id", authMiddleware, userController.updateUser);
 router.delete("/users/:id", authMiddleware, adminMiddleware, userController.delete);
+
+
 
 /* ==================== PRODUCTS ==================== */
 router.get('/products/full', productController.getAllProductsWithVariants); 

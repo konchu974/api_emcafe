@@ -126,3 +126,71 @@ export async function sendOrderEmails(params: OrderEmailParams) {
     ),
   ]);
 }
+
+// -----------------------------
+// Password Reset Email Types
+// -----------------------------
+type PasswordResetEmailParams = {
+  email: string;
+  token: string;
+  firstName?: string;
+};
+
+// -----------------------------
+// Password Reset Email HTML
+// -----------------------------
+function passwordResetHtml({ token, firstName }: PasswordResetEmailParams) {
+  const resetUrl = `https://emcaffe-front.onrender.com/fr/reset-password?token=${token}`;
+
+  return `
+  <div style="font-family:Arial, sans-serif; line-height:1.6; color:#333;">
+    <h2 style="color:#5C3F32;">Réinitialisation de votre mot de passe EMCAFFÉ</h2>
+    
+    ${firstName ? `<p>Bonjour ${firstName},</p>` : '<p>Bonjour,</p>'}
+    
+    <p>Vous avez demandé à réinitialiser votre mot de passe.</p>
+    
+    <p>Veuillez utiliser le code suivant pour réinitialiser votre mot de passe :</p>
+    
+    <div style="background-color:#f5f5f5; padding:20px; margin:20px 0; border-radius:8px; text-align:center;">
+      <h1 style="color:#5C3F32; font-size:32px; letter-spacing:4px; margin:0;">
+        ${token}
+      </h1>
+    </div>
+    
+    <p>Ou cliquez sur ce lien :</p>
+    <p>
+      <a href="${resetUrl}" 
+         target="_blank" 
+         style="background-color:#5C3F32; color:white; padding:12px 24px; text-decoration:none; border-radius:4px; display:inline-block;">
+        Réinitialiser mon mot de passe
+      </a>
+    </p>
+    
+    <p style="color:#666; font-size:14px; margin-top:24px;">
+      ⚠️ Ce code expire dans <strong>1 heure</strong>.
+    </p>
+    
+    <p style="color:#666; font-size:14px;">
+      Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
+    </p>
+    
+    <p style="margin-top:24px;">
+      Cordialement,<br/>
+      L'équipe EMCAFFÉ ☕
+    </p>
+  </div>`;
+}
+
+// -----------------------------
+// Send Password Reset Email
+// -----------------------------
+export async function sendPasswordResetEmail(params: PasswordResetEmailParams) {
+  await transporter.sendMail({
+    from: EMAIL_FROM || SMTP_USER,
+    to: params.email,
+    subject: 'Réinitialisation de votre mot de passe EMCAFFÉ',
+    html: passwordResetHtml(params),
+  });
+}
+

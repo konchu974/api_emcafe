@@ -94,4 +94,80 @@ updateAddress = async (req: AuthRequest, res: Response) => {
       res.status(404).json({ message: err.message });
     }
   };
+
+
+  /**
+   * 🔐 Demande de réinitialisation de mot de passe
+   * POST /api/users/request-password-reset
+   * Body: { email: string }
+   */
+  requestPasswordReset = async (req: Request, res: Response) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email requis',
+        });
+      }
+
+      // Appel au service
+      await this.userService.requestPasswordReset(email);
+
+      // ⚠️ Toujours renvoyer un succès (même si email inexistant)
+      // pour éviter l'énumération des comptes
+      res.status(200).json({
+        success: true,
+        message: 'Si cet email existe, un code de réinitialisation a été envoyé.',
+      });
+    } catch (err: any) {
+      console.error('❌ requestPasswordReset ERROR:', err);
+      res.status(500).json({
+        success: false,
+        message: 'Erreur lors de la demande de réinitialisation',
+      });
+    }
+  };
+
+  /**
+   * 🔑 Réinitialisation du mot de passe avec token
+   * POST /api/users/reset-password
+   * Body: { token: string, newPassword: string }
+   */
+  resetPassword = async (req: Request, res: Response) => {
+    try {
+      const { token, newPassword } = req.body;
+
+      if (!token || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Token et nouveau mot de passe requis',
+        });
+      }
+
+      // Validation du mot de passe (optionnel)
+      if (newPassword.length < 8) {
+        return res.status(400).json({
+          success: false,
+          message: 'Le mot de passe doit contenir au moins 8 caractères',
+        });
+      }
+
+      // Appel au service
+      await this.userService.resetPassword(token, newPassword);
+
+      res.status(200).json({
+        success: true,
+        message: 'Mot de passe réinitialisé avec succès',
+      });
+    } catch (err: any) {
+      console.error('❌ resetPassword ERROR:', err);
+      res.status(400).json({
+        success: false,
+        message: err.message || 'Token invalide ou expiré',
+      });
+    }
+  };
 }
+

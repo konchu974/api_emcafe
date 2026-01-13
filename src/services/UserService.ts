@@ -1,13 +1,16 @@
 import { AppDataSource } from "../config/database";
 import { UserAccount } from "../entities/UserAccount";
+import { PasswordResetToken } from "../entities/PasswordResetToken";
 import { RegisterDto } from "../dtos/user/RegisterDto";
 import { LoginDto } from "../dtos/user/LoginDto";
 import { UpdateUserDto } from "../dtos/user/UpdateUserDto";
 import { hashPassword, comparePassword } from "../utils/hashPassword";
 import { generateToken } from "../utils/jwt";
+import { sendPasswordResetEmail } from "./emailService";
 
 export class UserService {
   private userRepository = AppDataSource.getRepository(UserAccount);
+  private passwordResetTokenRepository = AppDataSource.getRepository(PasswordResetToken);
 
   /* ---------------------------------------------------------
      REGISTER
@@ -100,7 +103,6 @@ export class UserService {
 
     if (!user) throw new Error("Utilisateur non trouvé");
 
-    // Assign correctly mapped fields
     user.address_line1 = data.address_line1;
     user.address_line2 = data.address_line2;
     user.city = data.city;
@@ -163,5 +165,88 @@ export class UserService {
     if (result.affected === 0) throw new Error("Utilisateur non trouvé");
 
     return { message: "Utilisateur supprimé" };
+  }
+
+  /* ---------------------------------------------------------
+     GENERATE RESET TOKEN (6 digits)
+  --------------------------------------------------------- */
+  private generateResetToken(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
+  /* ---------------------------------------------------------
+     REQUEST PASSWORD RESET
+  --------------------------------------------------------- */
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.userRepository.findOne({ 
+      where: { email } 
+    });
+
+    if (!user) {
+      console.warn(`⚠️ Tentative de reset pour email inexistant: ${email}`);
+      return;
+    }
+
+    await this.passwordResetTokenRepository.update(
+      {
+        id_user_account: user.id_user_account,
+        used: false,
+      },
+      { used: true }
+    );
+
+    const token = this.generateResetToken();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1);
+
+    const resetToken = this.passwordResetTokenRepository.create({
+      id_user_account: user.id_user_account,
+      token,
+      expires_at: expiresAt,
+      used: false,
+    });
+
+    await this.passwordResetTokenRepository.save(resetToken);
+
+    await sendPasswordResetEmail({
+      email: user.email,
+      token,
+      firstName: user.first_name,
+    });
+
+    console.log(`✅ Token de reset envoyé à ${email}`);
+  }
+
+  /* ---------------------------------------------------------
+     RESET PASSWORD WITH TOKEN
+  --------------------------------------------------------- */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const resetToken = await this.passwordResetTokenRepository.findOne({
+      where: { token },
+    });
+
+    if (!resetToken) {
+      throw new Error("Token invalide");
+    }
+
+    if (new Date() > resetToken.expires_at) {
+      throw new Error("Token expiré");
+    }
+
+    if (resetToken.used) {
+      throw new Error("Token déjà utilisé");
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    await this.userRepository.update(
+      { id_user_account: resetToken.id_user_account },
+      { password: hashedPassword }
+    );
+
+    resetToken.used = true;
+    await this.passwordResetTokenRepository.save(resetToken);
+
+    console.log(`✅ Mot de passe réinitialisé pour user ${resetToken.id_user_account}`);
   }
 }
