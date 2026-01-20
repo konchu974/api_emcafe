@@ -1,7 +1,7 @@
+import dotenv from "dotenv";
 import "reflect-metadata";
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import bodyParser from "body-parser";
 import { AppDataSource } from "./config/database";
 import router from "./routes";
@@ -9,6 +9,9 @@ import { stripeWebhook } from "./controllers/stripeWebhookController";
 import sendcloudRoutes from "./routes/sendcloudRoutes";
 
 dotenv.config();
+
+console.log("ENV USER:", process.env.DB_USERNAME);
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
