@@ -62,14 +62,19 @@ export class VariantService {
   /**
    * Supprimer un variant (soft delete)
    */
-  async deleteVariant(variantId: string): Promise<boolean> {
-    const result = await this.variantRepository.update(variantId, {
-      isActive: false,
-    });
-
+ async deleteVariant(variantId: string): Promise<boolean> {
+  try {
+    // Vrai DELETE
+    const result = await this.variantRepository.delete(variantId);
+    
+    console.log(`✅ Variant ${variantId} supprimé, affected: ${result.affected}`);
+    
     return result.affected === 1;
+  } catch (error) {
+    console.error('❌ Erreur deleteVariant:', error);
+    throw error;
   }
-
+}
   /**
    * Supprimer définitivement un variant
    */

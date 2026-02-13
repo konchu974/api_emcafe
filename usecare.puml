@@ -1,0 +1,25 @@
+@startuml
+actor "Utilisateur invité" as Invité
+actor "Utilisateur connecté" as Client
+actor "Administrateur" as Admin
+actor Stripe
+actor SendCloud
+
+Invité --> (Consulter catalogue)
+Invité --> (Ajouter produit au panier)
+Invité --> (Passer commande)
+
+Client --> (Consulter catalogue)
+Client --> (Ajouter produit au panier)
+Client --> (Passer commande)
+Client --> (Suivre commande)
+Client --> (Accéder profil)
+Client --> (Historique commandes)
+
+Admin --> (Gérer produits et variantes)
+Admin --> (Gérer commandes)
+Admin --> (Gérer utilisateurs)
+
+(Passer commande) --> Stripe
+(Passer commande) --> SendCloud
+@enduml

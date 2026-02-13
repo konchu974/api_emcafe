@@ -1,0 +1,19 @@
+@startuml
+actor "Utilisateur invité" as Invité
+participant "Front-end Astro" as FE
+participant "Back-end Node.js" as BE
+participant "Stripe" as Stripe
+participant "SendCloud" as SC
+
+Invité -> FE : Ajouter produit au panier
+FE -> FE : Stockage dans localStorage
+Invité -> FE : Valider commande + infos livraison
+FE -> BE : Envoyer commande et infos
+BE -> BE : Vérifier stock et calcul total
+BE -> Stripe : Créer intention de paiement
+Stripe -> BE : Confirmer paiement
+BE -> SC : Créer étiquette livraison
+SC -> BE : Confirmation
+BE -> FE : Confirmation commande + numéro suivi
+FE -> Invité : Affichage confirmation
+@enduml
